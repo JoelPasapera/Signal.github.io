@@ -3,8 +3,486 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Flow Tracker</title>
+    <title>Stock Flow Tracker - Client Side</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .stats-panel {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 30px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            min-width: 150px;
+        }
+
+        .stat-box.new { background: rgba(76, 175, 80, 0.3); }
+        .stat-box.removed { background: rgba(244, 67, 54, 0.3); }
+
+        .stat-label {
+            display: block;
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            display: block;
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .upload-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .upload-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input[type="date"] {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            width: 200px;
+        }
+
+        .file-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .file-group {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-group h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .file-group label {
+            display: block;
+            margin: 10px 0 5px 0;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 10px;
+        }
+
+        .file-group input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-group input[type="file"]:hover {
+            border-color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .file-status {
+            font-size: 0.85em;
+            margin-top: 3px;
+            color: #666;
+        }
+
+        .file-status.loaded {
+            color: #4caf50;
+            font-weight: 600;
+        }
+
+        .btn-upload {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: block;
+            margin: 20px auto;
+        }
+
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-upload:active {
+            transform: translateY(0);
+        }
+
+        .btn-upload:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status-message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .tabs-section {
+            padding: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .tab-button {
+            padding: 15px 30px;
+            background: #f8f9fa;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .tab-button:hover {
+            background: #e9ecef;
+            color: #667eea;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .tab-content h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .controls input,
+        .controls select {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .controls input:focus,
+        .controls select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .controls input {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #eee;
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        td {
+            padding: 15px;
+        }
+
+        .expand-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: all 0.3s;
+        }
+
+        .expand-btn:hover {
+            background: #764ba2;
+            transform: scale(1.1);
+        }
+
+        .expand-btn.expanded {
+            transform: rotate(90deg);
+        }
+
+        .symbol-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 1.1em;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .status-badge.new {
+            background: #4caf50;
+            color: white;
+        }
+
+        .status-badge.removed {
+            background: #f44336;
+            color: white;
+        }
+
+        .status-badge.active {
+            background: #2196f3;
+            color: white;
+        }
+
+        .count-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            background: #667eea;
+            color: white;
+        }
+
+        .expanded-row {
+            display: none;
+        }
+
+        .expanded-row.show {
+            display: table-row;
+        }
+
+        .expanded-content {
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .prints-section {
+            margin-bottom: 20px;
+        }
+
+        .prints-section h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .prints-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .print-card {
+            background: white;
+            padding: 12px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .print-card.darkpool {
+            border-left-color: #764ba2;
+        }
+
+        .print-date {
+            font-size: 0.85em;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .print-details {
+            font-size: 0.9em;
+            color: #333;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-style: italic;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .file-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .controls input,
+            .controls select {
+                width: 100%;
+            }
+            
+            .stats-panel {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .stat-box {
+                min-width: auto;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -29,7 +507,7 @@
         <!-- Upload Section -->
         <section class="upload-section">
             <h2>📁 Cargar Archivos CSV</h2>
-            <form id="uploadForm" enctype="multipart/form-data">
+            <form id="uploadForm">
                 <div class="form-group">
                     <label>Fecha:</label>
                     <input type="date" id="uploadDate" name="date" required>
@@ -38,20 +516,44 @@
                 <div class="file-grid">
                     <div class="file-group">
                         <h3>Trendspider Files (6)</h3>
-                        <input type="file" name="trendspider_1" accept=".csv" required>
-                        <input type="file" name="trendspider_2" accept=".csv" required>
-                        <input type="file" name="trendspider_3" accept=".csv" required>
-                        <input type="file" name="trendspider_4" accept=".csv" required>
-                        <input type="file" name="trendspider_5" accept=".csv" required>
-                        <input type="file" name="trendspider_6" accept=".csv" required>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="trendspider_1" accept=".csv" required>
+                            <div class="file-status" id="status_trendspider_1"></div>
+                        </div>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="trendspider_2" accept=".csv" required>
+                            <div class="file-status" id="status_trendspider_2"></div>
+                        </div>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="trendspider_3" accept=".csv" required>
+                            <div class="file-status" id="status_trendspider_3"></div>
+                        </div>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="trendspider_4" accept=".csv" required>
+                            <div class="file-status" id="status_trendspider_4"></div>
+                        </div>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="trendspider_5" accept=".csv" required>
+                            <div class="file-status" id="status_trendspider_5"></div>
+                        </div>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="trendspider_6" accept=".csv" required>
+                            <div class="file-status" id="status_trendspider_6"></div>
+                        </div>
                     </div>
                     
                     <div class="file-group">
                         <h3>Options & Dark Pool</h3>
                         <label>Unusual Options:</label>
-                        <input type="file" name="options" accept=".csv" required>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="options" accept=".csv" required>
+                            <div class="file-status" id="status_options"></div>
+                        </div>
                         <label>Dark Pool:</label>
-                        <input type="file" name="darkpool" accept=".csv" required>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="darkpool" accept=".csv" required>
+                            <div class="file-status" id="status_darkpool"></div>
+                        </div>
                     </div>
                 </div>
                 
@@ -102,7 +604,7 @@
                             </tr>
                         </thead>
                         <tbody id="masterTableBody">
-                            <!-- Rows will be populated by JavaScript -->
+                            <tr><td colspan="6" class="no-data">Carga archivos CSV para comenzar</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -122,7 +624,7 @@
                             </tr>
                         </thead>
                         <tbody id="darkPoolTableBody">
-                            <!-- Rows will be populated by JavaScript -->
+                            <tr><td colspan="5" class="no-data">No hay actividad de Dark Pool</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -142,7 +644,7 @@
                             </tr>
                         </thead>
                         <tbody id="optionsTableBody">
-                            <!-- Rows will be populated by JavaScript -->
+                            <tr><td colspan="5" class="no-data">No hay opciones inusuales</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -150,8 +652,659 @@
         </section>
     </div>
 
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Global state
+        let historicalData = []; // Array to store up to 5 days of data
+        let currentTab = 'masterFlow';
+        let searchTerm = '';
+        let filterType = 'all';
+        let sortType = 'symbol_asc';
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set today's date as default
+            document.getElementById('uploadDate').valueAsDate = new Date();
+            
+            // Load historical data from localStorage
+            loadHistoricalData();
+            
+            // Tab switching
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    switchTab(this.dataset.tab);
+                });
+            });
+            
+            // Upload form
+            document.getElementById('uploadForm').addEventListener('submit', handleUpload);
+            
+            // File input change handlers for status updates
+            ['trendspider_1', 'trendspider_2', 'trendspider_3', 'trendspider_4', 'trendspider_5', 'trendspider_6', 'options', 'darkpool'].forEach(id => {
+                document.getElementById(id).addEventListener('change', function(e) {
+                    const statusDiv = document.getElementById(`status_${id}`);
+                    if (e.target.files.length > 0) {
+                        statusDiv.textContent = `✓ ${e.target.files[0].name}`;
+                        statusDiv.classList.add('loaded');
+                    }
+                });
+            });
+            
+            // Search and filters
+            document.getElementById('searchInput').addEventListener('input', function() {
+                searchTerm = this.value.toLowerCase();
+                renderCurrentTab();
+            });
+            
+            document.getElementById('filterSelect').addEventListener('change', function() {
+                filterType = this.value;
+                renderCurrentTab();
+            });
+            
+            document.getElementById('sortSelect').addEventListener('change', function() {
+                sortType = this.value;
+                renderCurrentTab();
+            });
+            
+            // Render initial view
+            renderCurrentTab();
+        });
+
+        function loadHistoricalData() {
+            const saved = localStorage.getItem('stockFlowHistoricalData');
+            if (saved) {
+                try {
+                    historicalData = JSON.parse(saved);
+                    console.log('Loaded historical data:', historicalData.length, 'days');
+                } catch (e) {
+                    console.error('Error loading historical data:', e);
+                    historicalData = [];
+                }
+            }
+        }
+
+        function saveHistoricalData() {
+            // Keep only last 5 days
+            if (historicalData.length > 5) {
+                historicalData = historicalData.slice(-5);
+            }
+            localStorage.setItem('stockFlowHistoricalData', JSON.stringify(historicalData));
+        }
+
+        function switchTab(tabName) {
+            currentTab = tabName;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            
+            renderCurrentTab();
+        }
+
+        async function handleUpload(e) {
+            e.preventDefault();
+            
+            const statusDiv = document.getElementById('uploadStatus');
+            statusDiv.textContent = '⏳ Procesando archivos...';
+            statusDiv.className = 'status-message info';
+            
+            try {
+                const date = document.getElementById('uploadDate').value;
+                
+                // Read all files
+                const trendspiderFiles = [];
+                for (let i = 1; i <= 6; i++) {
+                    const file = document.getElementById(`trendspider_${i}`).files[0];
+                    if (!file) {
+                        throw new Error(`Falta archivo Trendspider ${i}`);
+                    }
+                    trendspiderFiles.push(file);
+                }
+                
+                const optionsFile = document.getElementById('options').files[0];
+                const darkpoolFile = document.getElementById('darkpool').files[0];
+                
+                if (!optionsFile) throw new Error('Falta archivo de opciones');
+                if (!darkpoolFile) throw new Error('Falta archivo de dark pool');
+                
+                statusDiv.textContent = '📖 Leyendo archivos CSV...';
+                
+                // Process Trendspider files
+                const allSymbols = new Set();
+                for (const file of trendspiderFiles) {
+                    const symbols = await processTrendspiderFile(file);
+                    symbols.forEach(s => allSymbols.add(s));
+                }
+                
+                // Process options and darkpool
+                const optionsData = await processOptionsFile(optionsFile);
+                const darkpoolData = await processDarkpoolFile(darkpoolFile);
+                
+                statusDiv.textContent = '🔍 Comparando con días anteriores...';
+                
+                // Get previous day symbols
+                const previousSymbols = historicalData.length > 0 
+                    ? new Set(historicalData[historicalData.length - 1].symbols.map(s => s.symbol))
+                    : new Set();
+                
+                // Identify new and removed symbols
+                const currentSymbolsSet = new Set(allSymbols);
+                const newSymbols = [...currentSymbolsSet].filter(s => !previousSymbols.has(s));
+                const removedSymbols = [...previousSymbols].filter(s => !currentSymbolsSet.has(s));
+                
+                // Create day data
+                const dayData = {
+                    date: date,
+                    symbols: []
+                };
+                
+                // Add current symbols
+                for (const symbol of currentSymbolsSet) {
+                    dayData.symbols.push({
+                        symbol: symbol,
+                        is_new: newSymbols.includes(symbol),
+                        is_removed: false,
+                        options_prints: optionsData[symbol] || [],
+                        darkpool_prints: darkpoolData[symbol] || []
+                    });
+                }
+                
+                // Add removed symbols
+                for (const symbol of removedSymbols) {
+                    dayData.symbols.push({
+                        symbol: symbol,
+                        is_new: false,
+                        is_removed: true,
+                        options_prints: [],
+                        darkpool_prints: []
+                    });
+                }
+                
+                // Add to historical data
+                historicalData.push(dayData);
+                
+                // Keep only last 5 days
+                if (historicalData.length > 5) {
+                    historicalData = historicalData.slice(-5);
+                }
+                
+                // Save to localStorage
+                saveHistoricalData();
+                
+                statusDiv.textContent = `✅ Éxito! Fecha: ${date} | Total: ${currentSymbolsSet.size} | Nuevos: ${newSymbols.length} | Eliminados: ${removedSymbols.length}`;
+                statusDiv.className = 'status-message success';
+                
+                // Update view
+                renderCurrentTab();
+                
+                // Reset form
+                e.target.reset();
+                document.getElementById('uploadDate').valueAsDate = new Date();
+                
+                // Clear file status indicators
+                document.querySelectorAll('.file-status').forEach(div => {
+                    div.textContent = '';
+                    div.classList.remove('loaded');
+                });
+                
+            } catch (error) {
+                console.error('Error processing files:', error);
+                statusDiv.textContent = `❌ Error: ${error.message}`;
+                statusDiv.className = 'status-message error';
+            }
+        }
+
+        async function readCSVFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const text = e.target.result;
+                        const rows = parseCSV(text);
+                        resolve(rows);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = () => reject(new Error('Error leyendo archivo'));
+                reader.readAsText(file);
+            });
+        }
+
+        function parseCSV(text) {
+            const lines = text.split('\n').filter(line => line.trim());
+            if (lines.length === 0) return [];
+            
+            const headers = lines[0].split(',').map(h => h.trim().replace(/['"]/g, ''));
+            const rows = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim().replace(/['"]/g, ''));
+                if (values.length === headers.length) {
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index];
+                    });
+                    rows.push(row);
+                }
+            }
+            
+            return rows;
+        }
+
+        async function processTrendspiderFile(file) {
+            const rows = await readCSVFile(file);
+            const symbols = new Set();
+            
+            for (const row of rows) {
+                // Try to find symbol column
+                let symbol = null;
+                for (const key of Object.keys(row)) {
+                    const lowerKey = key.toLowerCase();
+                    if (lowerKey === 'symbol' || lowerKey === 'ticker' || lowerKey === 'stock') {
+                        symbol = row[key].trim().toUpperCase();
+                        break;
+                    }
+                }
+                if (symbol) {
+                    symbols.add(symbol);
+                }
+            }
+            
+            return symbols;
+        }
+
+        async function processOptionsFile(file) {
+            const rows = await readCSVFile(file);
+            const optionsData = {};
+            
+            for (const row of rows) {
+                let symbol = null;
+                for (const key of Object.keys(row)) {
+                    const lowerKey = key.toLowerCase();
+                    if (lowerKey === 'symbol' || lowerKey === 'ticker' || lowerKey === 'stock' || lowerKey === 'underlying') {
+                        symbol = row[key].trim().toUpperCase();
+                        break;
+                    }
+                }
+                
+                if (symbol) {
+                    if (!optionsData[symbol]) {
+                        optionsData[symbol] = [];
+                    }
+                    optionsData[symbol].push(row);
+                }
+            }
+            
+            return optionsData;
+        }
+
+        async function processDarkpoolFile(file) {
+            const rows = await readCSVFile(file);
+            const darkpoolData = {};
+            
+            for (const row of rows) {
+                let symbol = null;
+                for (const key of Object.keys(row)) {
+                    const lowerKey = key.toLowerCase();
+                    if (lowerKey === 'symbol' || lowerKey === 'ticker' || lowerKey === 'stock') {
+                        symbol = row[key].trim().toUpperCase();
+                        break;
+                    }
+                }
+                
+                if (symbol) {
+                    if (!darkpoolData[symbol]) {
+                        darkpoolData[symbol] = [];
+                    }
+                    darkpoolData[symbol].push(row);
+                }
+            }
+            
+            return darkpoolData;
+        }
+
+        function getCurrentDaySymbols() {
+            if (historicalData.length === 0) return [];
+            
+            const latestDay = historicalData[historicalData.length - 1];
+            const symbolsMap = {};
+            
+            // Get all symbols with their historical data
+            for (const dayData of historicalData) {
+                for (const symbolData of dayData.symbols) {
+                    if (!symbolsMap[symbolData.symbol]) {
+                        symbolsMap[symbolData.symbol] = {
+                            symbol: symbolData.symbol,
+                            is_new: false,
+                            is_removed: false,
+                            options_prints: [],
+                            darkpool_prints: [],
+                            total_options: 0,
+                            total_darkpool: 0
+                        };
+                    }
+                    
+                    // Add prints with date
+                    for (const print of symbolData.options_prints) {
+                        symbolsMap[symbolData.symbol].options_prints.push({
+                            ...print,
+                            date: dayData.date
+                        });
+                    }
+                    
+                    for (const print of symbolData.darkpool_prints) {
+                        symbolsMap[symbolData.symbol].darkpool_prints.push({
+                            ...print,
+                            date: dayData.date
+                        });
+                    }
+                }
+            }
+            
+            // Update status from latest day
+            for (const symbolData of latestDay.symbols) {
+                if (symbolsMap[symbolData.symbol]) {
+                    symbolsMap[symbolData.symbol].is_new = symbolData.is_new;
+                    symbolsMap[symbolData.symbol].is_removed = symbolData.is_removed;
+                }
+            }
+            
+            // Calculate totals
+            for (const symbol in symbolsMap) {
+                symbolsMap[symbol].total_options = symbolsMap[symbol].options_prints.length;
+                symbolsMap[symbol].total_darkpool = symbolsMap[symbol].darkpool_prints.length;
+            }
+            
+            return Object.values(symbolsMap);
+        }
+
+        function updateStats() {
+            if (historicalData.length === 0) {
+                document.getElementById('totalSymbols').textContent = '0';
+                document.getElementById('newSymbols').textContent = '0';
+                document.getElementById('removedSymbols').textContent = '0';
+                return;
+            }
+            
+            const latestDay = historicalData[historicalData.length - 1];
+            const total = latestDay.symbols.length;
+            const newCount = latestDay.symbols.filter(s => s.is_new).length;
+            const removedCount = latestDay.symbols.filter(s => s.is_removed).length;
+            
+            document.getElementById('totalSymbols').textContent = total;
+            document.getElementById('newSymbols').textContent = newCount;
+            document.getElementById('removedSymbols').textContent = removedCount;
+        }
+
+        function filterAndSortSymbols(symbols) {
+            // Filter
+            let filtered = symbols.filter(symbol => {
+                // Search filter
+                if (searchTerm && !symbol.symbol.toLowerCase().includes(searchTerm)) {
+                    return false;
+                }
+                
+                // Type filter
+                switch (filterType) {
+                    case 'new':
+                        return symbol.is_new;
+                    case 'removed':
+                        return symbol.is_removed;
+                    case 'with_options':
+                        return symbol.total_options > 0;
+                    case 'with_darkpool':
+                        return symbol.total_darkpool > 0;
+                    default:
+                        return true;
+                }
+            });
+            
+            // Sort
+            filtered.sort((a, b) => {
+                switch (sortType) {
+                    case 'symbol_asc':
+                        return a.symbol.localeCompare(b.symbol);
+                    case 'symbol_desc':
+                        return b.symbol.localeCompare(a.symbol);
+                    case 'options_desc':
+                        return b.total_options - a.total_options;
+                    case 'darkpool_desc':
+                        return b.total_darkpool - a.total_darkpool;
+                    default:
+                        return 0;
+                }
+            });
+            
+            return filtered;
+        }
+
+        function renderCurrentTab() {
+            updateStats();
+            
+            const allSymbols = getCurrentDaySymbols();
+            const filtered = filterAndSortSymbols(allSymbols);
+            
+            switch (currentTab) {
+                case 'masterFlow':
+                    renderMasterFlow(filtered);
+                    break;
+                case 'darkPool':
+                    renderDarkPool(filtered.filter(s => s.total_darkpool > 0));
+                    break;
+                case 'unusualOptions':
+                    renderUnusualOptions(filtered.filter(s => s.total_options > 0));
+                    break;
+            }
+        }
+
+        function renderMasterFlow(symbols) {
+            const tbody = document.getElementById('masterTableBody');
+            
+            if (symbols.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="no-data">No hay datos disponibles. Carga archivos CSV para comenzar.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = symbols.map((symbol, index) => {
+                const statusBadge = symbol.is_new ? '<span class="status-badge new">NUEVO</span>' :
+                                  symbol.is_removed ? '<span class="status-badge removed">ELIMINADO</span>' :
+                                  '<span class="status-badge active">ACTIVO</span>';
+                
+                return `
+                    <tr data-symbol-index="${index}">
+                        <td><button class="expand-btn" onclick="toggleExpand(${index}, 'master')">▶</button></td>
+                        <td><span class="symbol-badge">${symbol.symbol}</span></td>
+                        <td>${statusBadge}</td>
+                        <td><span class="count-badge">${symbol.total_options}</span></td>
+                        <td><span class="count-badge">${symbol.total_darkpool}</span></td>
+                        <td>Click para expandir y ver prints</td>
+                    </tr>
+                    <tr class="expanded-row" id="expanded-master-${index}">
+                        <td colspan="6">
+                            <div class="expanded-content">
+                                ${renderExpandedContent(symbol)}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderDarkPool(symbols) {
+            const tbody = document.getElementById('darkPoolTableBody');
+            
+            if (symbols.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="no-data">No hay actividad de Dark Pool para mostrar.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = symbols.map((symbol, index) => {
+                const statusBadge = symbol.is_new ? '<span class="status-badge new">NUEVO</span>' :
+                                  symbol.is_removed ? '<span class="status-badge removed">ELIMINADO</span>' :
+                                  '<span class="status-badge active">ACTIVO</span>';
+                
+                const latestPrints = symbol.darkpool_prints.slice(0, 3).map(print => 
+                    `📅 ${print.date}`
+                ).join(' • ');
+                
+                return `
+                    <tr data-symbol-index="${index}">
+                        <td><button class="expand-btn" onclick="toggleExpand(${index}, 'darkpool')">▶</button></td>
+                        <td><span class="symbol-badge">${symbol.symbol}</span></td>
+                        <td>${statusBadge}</td>
+                        <td><span class="count-badge">${symbol.total_darkpool}</span></td>
+                        <td>${latestPrints || 'Ver detalles'}</td>
+                    </tr>
+                    <tr class="expanded-row" id="expanded-darkpool-${index}">
+                        <td colspan="5">
+                            <div class="expanded-content">
+                                ${renderDarkPoolPrints(symbol.darkpool_prints)}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderUnusualOptions(symbols) {
+            const tbody = document.getElementById('optionsTableBody');
+            
+            if (symbols.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="no-data">No hay actividad de opciones inusuales para mostrar.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = symbols.map((symbol, index) => {
+                const statusBadge = symbol.is_new ? '<span class="status-badge new">NUEVO</span>' :
+                                  symbol.is_removed ? '<span class="status-badge removed">ELIMINADO</span>' :
+                                  '<span class="status-badge active">ACTIVO</span>';
+                
+                const latestPrints = symbol.options_prints.slice(0, 3).map(print => 
+                    `📅 ${print.date}`
+                ).join(' • ');
+                
+                return `
+                    <tr data-symbol-index="${index}">
+                        <td><button class="expand-btn" onclick="toggleExpand(${index}, 'options')">▶</button></td>
+                        <td><span class="symbol-badge">${symbol.symbol}</span></td>
+                        <td>${statusBadge}</td>
+                        <td><span class="count-badge">${symbol.total_options}</span></td>
+                        <td>${latestPrints || 'Ver detalles'}</td>
+                    </tr>
+                    <tr class="expanded-row" id="expanded-options-${index}">
+                        <td colspan="5">
+                            <div class="expanded-content">
+                                ${renderOptionsPrints(symbol.options_prints)}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderExpandedContent(symbol) {
+            let content = '';
+            
+            if (symbol.options_prints.length > 0) {
+                content += `
+                    <div class="prints-section">
+                        <h4>📈 Unusual Options (${symbol.options_prints.length})</h4>
+                        ${renderOptionsPrints(symbol.options_prints)}
+                    </div>
+                `;
+            }
+            
+            if (symbol.darkpool_prints.length > 0) {
+                content += `
+                    <div class="prints-section">
+                        <h4>🌑 Dark Pool (${symbol.darkpool_prints.length})</h4>
+                        ${renderDarkPoolPrints(symbol.darkpool_prints)}
+                    </div>
+                `;
+            }
+            
+            if (content === '') {
+                content = '<p class="no-data">No hay prints disponibles para este símbolo.</p>';
+            }
+            
+            return content;
+        }
+
+        function renderOptionsPrints(prints) {
+            if (prints.length === 0) {
+                return '<p class="no-data">No hay prints de opciones.</p>';
+            }
+            
+            return `
+                <div class="prints-grid">
+                    ${prints.map(print => `
+                        <div class="print-card">
+                            <div class="print-date">📅 ${print.date}</div>
+                            <div class="print-details">
+                                ${Object.entries(print)
+                                    .filter(([key]) => key !== 'date')
+                                    .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+                                    .join(' | ')
+                                }
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderDarkPoolPrints(prints) {
+            if (prints.length === 0) {
+                return '<p class="no-data">No hay prints de dark pool.</p>';
+            }
+            
+            return `
+                <div class="prints-grid">
+                    ${prints.map(print => `
+                        <div class="print-card darkpool">
+                            <div class="print-date">📅 ${print.date}</div>
+                            <div class="print-details">
+                                ${Object.entries(print)
+                                    .filter(([key]) => key !== 'date')
+                                    .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+                                    .join(' | ')
+                                }
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function toggleExpand(index, type) {
+            const expandedRow = document.getElementById(`expanded-${type}-${index}`);
+            const button = event.target;
+            
+            if (expandedRow.classList.contains('show')) {
+                expandedRow.classList.remove('show');
+                button.classList.remove('expanded');
+            } else {
+                // Close all other expanded rows
+                document.querySelectorAll('.expanded-row.show').forEach(row => {
+                    row.classList.remove('show');
+                });
+                document.querySelectorAll('.expand-btn.expanded').forEach(btn => {
+                    btn.classList.remove('expanded');
+                });
+                
+                // Open this row
+                expandedRow.classList.add('show');
+                button.classList.add('expanded');
+            }
+        }
+    </script>
 </body>
 </html>
-
-
