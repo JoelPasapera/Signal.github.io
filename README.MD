@@ -2,6 +2,18 @@
 
 Aplicación web profesional para rastrear flujo de acciones mediante análisis de archivos CSV diarios de Trendspider, opciones inusuales y dark pool.
 
+
+---
+
+## 🌐 Ver Página Web
+
+¡Bienvenido al repositorio! Si deseas ver la página web completa sobre análisis y seguimiento del mercado, haz clic en el siguiente enlace:
+
+**[Acceder a la Web](https://joelpasapera.github.io/Signal.github.io/)**
+
+---
+
+
 ## 🎯 Características
 
 - **Procesamiento de 8 archivos CSV diarios**: 6 de Trendspider, 1 de opciones inusuales, 1 de dark pool
