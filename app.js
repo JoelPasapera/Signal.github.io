@@ -323,9 +323,12 @@ async function handleUpload(e) {
         
         statusDiv.textContent = '📊 Procesando opciones y dark pool...';
         
-        // Process options and darkpool
+        // Process options and darkpool - PDF Part 3 Fix: Better data processing
         const optionsData = await processOptionsFile(optionsFile);
         const darkpoolData = await processDarkpoolFile(darkpoolFile);
+        
+        console.log(`📊 Processed Options: ${Object.keys(optionsData).length} symbols`);
+        console.log(`🌑 Processed Dark Pool: ${Object.keys(darkpoolData).length} symbols`);
         
         statusDiv.textContent = '🔍 Comparando con días anteriores...';
         
@@ -354,7 +357,7 @@ async function handleUpload(e) {
                 sector: symbolInfo.sector || '',
                 is_new: newSymbols.includes(symbol),
                 is_removed: false,
-                is_etf: isETF(symbol), // Mark ETFs (PDF Part 2 - Requirement 4.1)
+                is_etf: isETF(symbol),
                 options_prints: optionsData[symbol] || [],
                 darkpool_prints: darkpoolData[symbol] || []
             };
@@ -428,20 +431,6 @@ function isETF(symbol) {
     if (COMMON_ETFS.has(symbol.toUpperCase())) {
         return true;
     }
-    
-    // Additional heuristics for ETF detection
-    const symbolUpper = symbol.toUpperCase();
-    
-    // Common ETF patterns
-    const etfPatterns = [
-        /^[A-Z]{3,4}$/, // 3-4 letter symbols are often ETFs if in right context
-        /.*X$/, // Many sector ETFs end in X (XLF, XLE, etc.)
-        /^I[A-Z]{2}$/, // iShares pattern (IWM, IEF, etc.)
-        /^V[A-Z]{2,3}$/, // Vanguard pattern (VOO, VTI, etc.)
-    ];
-    
-    // Note: This is a heuristic and may need refinement
-    // The COMMON_ETFS list is the primary filter
     
     return false; // Default to not ETF unless in list
 }
@@ -542,9 +531,12 @@ async function processTrendspiderFile(file) {
     return symbolsData;
 }
 
+// PDF Part 3 Fix: Improved options processing to not lose data
 async function processOptionsFile(file) {
     const rows = await readCSVFile(file);
     const optionsData = {};
+    
+    console.log(`📊 Processing ${rows.length} rows from options file...`);
     
     for (const row of rows) {
         let symbol = findSymbolInRow(row);
@@ -554,28 +546,43 @@ async function processOptionsFile(file) {
                 optionsData[symbol] = [];
             }
             
+            // PDF Part 3 Fix: Extract time properly
+            const time = row['TIME'] || row['Time'] || row['time'] || row['TIMESTAMP'] || row['Timestamp'] || '-';
+            
             const optionPrint = {
+                time: formatTime(time), // Format time for display
                 strike: row['STRIKE'] || row['Strike'] || row['strike'] || '-',
                 exp: row['EXP'] || row['Exp'] || row['Expiration'] || row['expiration'] || '-',
                 dte: row['DTE'] || row['Dte'] || row['dte'] || '-',
                 vol: parseNumber(row['VOL'] || row['Vol'] || row['Volume'] || row['volume'] || '0'),
                 premium: parseNumber(row['PREMIUM'] || row['Premium'] || row['premium'] || '0'),
-                type: row['TYPE'] || row['Type'] || row['type'] || row['Call/Put'] || '-'
+                type: row['TYPE'] || row['Type'] || row['type'] || row['Call/Put'] || row['CALL/PUT'] || '-'
             };
             
-            // Only add if has meaningful data (PDF Part 2 - Requirement 4.2)
-            if (optionPrint.vol > 0 || optionPrint.premium > 0) {
+            // PDF Part 3 Fix 2.1: Only add if has meaningful volume (avoid 0 prints)
+            // More strict filter: must have both volume AND premium
+            if (optionPrint.vol > 0 && optionPrint.premium > 0) {
                 optionsData[symbol].push(optionPrint);
             }
         }
     }
     
+    // Log statistics
+    let totalPrints = 0;
+    for (const symbol in optionsData) {
+        totalPrints += optionsData[symbol].length;
+    }
+    console.log(`✓ Options data: ${Object.keys(optionsData).length} symbols, ${totalPrints} prints`);
+    
     return optionsData;
 }
 
+// PDF Part 3 Fix: Improved darkpool processing to not lose data
 async function processDarkpoolFile(file) {
     const rows = await readCSVFile(file);
     const darkpoolData = {};
+    
+    console.log(`🌑 Processing ${rows.length} rows from darkpool file...`);
     
     for (const row of rows) {
         let symbol = findSymbolInRow(row);
@@ -585,22 +592,57 @@ async function processDarkpoolFile(file) {
                 darkpoolData[symbol] = [];
             }
             
+            // PDF Part 3 Fix: Extract time properly
+            const time = row['TIME'] || row['Time'] || row['time'] || row['TIMESTAMP'] || row['Timestamp'] || '-';
+            
             const dpPrint = {
-                time: row['TIME'] || row['Time'] || row['time'] || '-',
+                time: formatTime(time), // Format time for display
                 vol: parseNumber(row['VOL'] || row['Vol'] || row['Volume'] || row['volume'] || '0'),
                 price: parseNumber(row['PRICE'] || row['Price'] || row['price'] || '0'),
                 notional: parseNumber(row['NOTIONAL'] || row['Notional'] || row['notional'] || '0'),
-                pct_avg: row['% AVG'] || row['%AVG'] || row['PctAvg'] || '-'
+                pct_avg: row['% AVG'] || row['%AVG'] || row['PctAvg'] || row['pct_avg'] || '-'
             };
             
-            // Only add if has meaningful data (PDF Part 2 - Requirement 4.2)
+            // PDF Part 3 Fix 2.1: Only add if has meaningful data (avoid 0 prints)
+            // More strict filter: must have volume OR notional > 0
             if (dpPrint.vol > 0 || dpPrint.notional > 0) {
                 darkpoolData[symbol].push(dpPrint);
             }
         }
     }
     
+    // Log statistics
+    let totalPrints = 0;
+    for (const symbol in darkpoolData) {
+        totalPrints += darkpoolData[symbol].length;
+    }
+    console.log(`✓ Dark Pool data: ${Object.keys(darkpoolData).length} symbols, ${totalPrints} prints`);
+    
     return darkpoolData;
+}
+
+// PDF Part 3 Fix: Format time for display
+function formatTime(timeStr) {
+    if (!timeStr || timeStr === '-' || timeStr === '') return '-';
+    
+    // If already formatted, return as is
+    if (timeStr.includes(':')) return timeStr;
+    
+    // Try to parse and format if it's a timestamp
+    try {
+        const date = new Date(timeStr);
+        if (!isNaN(date.getTime())) {
+            return date.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+            });
+        }
+    } catch (e) {
+        // If parsing fails, return original
+    }
+    
+    return timeStr;
 }
 
 function findSymbolInRow(row) {
@@ -763,6 +805,7 @@ function getCurrentDaySymbols() {
     return latestDay.symbols.map(s => ({...s}));
 }
 
+// PDF Part 3 Fix 1.2: Improved sorting with all ascendente/descendente options
 function filterAndSortSymbols(symbols, tabName, excludeETFs = false) {
     const searchTerm = searchTerms[tabName] || '';
     const sortOption = sortOptions[tabName] || 'symbol_asc';
@@ -807,7 +850,7 @@ function filterAndSortSymbols(symbols, tabName, excludeETFs = false) {
     });
     filtered = Array.from(uniqueMap.values());
     
-    // Sort
+    // PDF Part 3 Fix 1.2: Enhanced sorting with asc/desc for all columns
     filtered.sort((a, b) => {
         const aMetrics = a.metrics || getEmptyMetrics();
         const bMetrics = b.metrics || getEmptyMetrics();
@@ -817,20 +860,51 @@ function filterAndSortSymbols(symbols, tabName, excludeETFs = false) {
                 return a.symbol.localeCompare(b.symbol);
             case 'symbol_desc':
                 return b.symbol.localeCompare(a.symbol);
+            
+            // Dark Pool sorting
+            case 'dp_vol_asc':
+                return aMetrics.dp_vol - bMetrics.dp_vol;
             case 'dp_vol_desc':
                 return bMetrics.dp_vol - aMetrics.dp_vol;
+            case 'dp_value_asc':
+                return aMetrics.dp_value_millions - bMetrics.dp_value_millions;
             case 'dp_value_desc':
                 return bMetrics.dp_value_millions - aMetrics.dp_value_millions;
+            case 'dp_prints_asc':
+                return aMetrics.dp_prints - bMetrics.dp_prints;
             case 'dp_prints_desc':
                 return bMetrics.dp_prints - aMetrics.dp_prints;
+            
+            // Options sorting
+            case 'opt_prints_asc':
+                return aMetrics.opt_prints - bMetrics.opt_prints;
+            case 'opt_prints_desc':
+                return bMetrics.opt_prints - aMetrics.opt_prints;
+            case 'opt_vol_asc':
+                return (aMetrics.call_vol + aMetrics.put_vol) - (bMetrics.call_vol + bMetrics.put_vol);
             case 'opt_vol_desc':
                 return (bMetrics.call_vol + bMetrics.put_vol) - (aMetrics.call_vol + aMetrics.put_vol);
+            case 'call_vol_asc':
+                return aMetrics.call_vol - bMetrics.call_vol;
             case 'call_vol_desc':
                 return bMetrics.call_vol - aMetrics.call_vol;
+            case 'put_vol_asc':
+                return aMetrics.put_vol - bMetrics.put_vol;
             case 'put_vol_desc':
                 return bMetrics.put_vol - aMetrics.put_vol;
+            case 'call_value_asc':
+                return aMetrics.call_value_millions - bMetrics.call_value_millions;
+            case 'call_value_desc':
+                return bMetrics.call_value_millions - aMetrics.call_value_millions;
+            case 'put_value_asc':
+                return aMetrics.put_value_millions - bMetrics.put_value_millions;
+            case 'put_value_desc':
+                return bMetrics.put_value_millions - aMetrics.put_value_millions;
+            case 'cp_ratio_asc':
+                return aMetrics.cp_ratio - bMetrics.cp_ratio;
             case 'cp_ratio_desc':
                 return bMetrics.cp_ratio - aMetrics.cp_ratio;
+            
             default:
                 return 0;
         }
@@ -1109,6 +1183,7 @@ function renderOptionsTable(prints) {
         <table class="matrix-table">
             <thead>
                 <tr>
+                    <th>TIME</th>
                     <th>STRIKE</th>
                     <th>EXP</th>
                     <th>DTE</th>
@@ -1119,6 +1194,7 @@ function renderOptionsTable(prints) {
             <tbody>
                 ${prints.map(p => `
                     <tr>
+                        <td>${p.time}</td>
                         <td>${p.strike}</td>
                         <td>${p.exp}</td>
                         <td>${p.dte}</td>
@@ -1132,6 +1208,7 @@ function renderOptionsTable(prints) {
 }
 
 // PDF Part 2 - Requirement 2: Dark pool same width as calls
+// PDF Part 3 Fix 2: Include TIME column
 function renderDarkPoolMatrix(symbol) {
     if (!symbol.darkpool_prints || symbol.darkpool_prints.length === 0) {
         return `
@@ -1261,6 +1338,7 @@ function toggleMatrixOpt(symbol) {
 }
 
 // PDF Part 2 - Requirement 3.2 & 3.3: Both - and X close the matrix
+// PDF Part 3 Fix 1: Both icons are now functional
 function closeMatrix(symbol) {
     const matrixRow = document.getElementById(`matrix-${symbol}`);
     const symbolRow = document.querySelector(`#row-${symbol}`);
