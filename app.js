@@ -538,6 +538,11 @@ async function processOptionsFile(file) {
     
     console.log(`📊 Processing ${rows.length} rows from options file...`);
     
+    // Debug: Log available columns from first row
+    if (rows.length > 0) {
+        console.log('📋 Options CSV columns:', Object.keys(rows[0]));
+    }
+    
     for (const row of rows) {
         let symbol = findSymbolInRow(row);
         
@@ -546,8 +551,8 @@ async function processOptionsFile(file) {
                 optionsData[symbol] = [];
             }
             
-            // PDF Part 3 Fix: Extract time properly
-            const time = row['TIME'] || row['Time'] || row['time'] || row['TIMESTAMP'] || row['Timestamp'] || '-';
+            // PDF Part 3 Fix: Extract time with flexible column name search
+            const time = findTimeInRow(row);
             
             const optionPrint = {
                 time: formatTime(time), // Format time for display
@@ -584,6 +589,11 @@ async function processDarkpoolFile(file) {
     
     console.log(`🌑 Processing ${rows.length} rows from darkpool file...`);
     
+    // Debug: Log available columns from first row
+    if (rows.length > 0) {
+        console.log('📋 Dark Pool CSV columns:', Object.keys(rows[0]));
+    }
+    
     for (const row of rows) {
         let symbol = findSymbolInRow(row);
         
@@ -592,8 +602,8 @@ async function processDarkpoolFile(file) {
                 darkpoolData[symbol] = [];
             }
             
-            // PDF Part 3 Fix: Extract time properly
-            const time = row['TIME'] || row['Time'] || row['time'] || row['TIMESTAMP'] || row['Timestamp'] || '-';
+            // PDF Part 3 Fix: Extract time with flexible column name search
+            const time = findTimeInRow(row);
             
             const dpPrint = {
                 time: formatTime(time), // Format time for display
@@ -621,27 +631,43 @@ async function processDarkpoolFile(file) {
     return darkpoolData;
 }
 
-// PDF Part 3 Fix: Format time for display
+// PDF Part 3 Fix: Format time for display - Enhanced version
 function formatTime(timeStr) {
-    if (!timeStr || timeStr === '-' || timeStr === '') return '-';
-    
-    // If already formatted, return as is
-    if (timeStr.includes(':')) return timeStr;
-    
-    // Try to parse and format if it's a timestamp
-    try {
-        const date = new Date(timeStr);
-        if (!isNaN(date.getTime())) {
-            return date.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: false 
-            });
-        }
-    } catch (e) {
-        // If parsing fails, return original
+    if (!timeStr || timeStr === '-' || timeStr === '' || timeStr === 'undefined' || timeStr === 'null') {
+        return '-';
     }
     
+    // If already formatted as HH:MM or HH:MM:SS, return as is
+    if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(timeStr)) {
+        return timeStr;
+    }
+    
+    // Try to parse as date/timestamp
+    try {
+        // Handle various date formats
+        let date;
+        
+        // Check if it's a Unix timestamp (number)
+        if (!isNaN(timeStr) && timeStr.length >= 10) {
+            date = new Date(parseInt(timeStr) * (timeStr.length === 10 ? 1000 : 1));
+        } else {
+            // Try parsing as date string
+            date = new Date(timeStr);
+        }
+        
+        // Validate the date
+        if (!isNaN(date.getTime())) {
+            // Format as HH:MM
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+    } catch (e) {
+        console.warn('⚠️ Could not parse time:', timeStr, e);
+    }
+    
+    // If all parsing fails, return the original value
+    // This might be a formatted time we don't recognize
     return timeStr;
 }
 
@@ -653,6 +679,33 @@ function findSymbolInRow(row) {
         }
     }
     return null;
+}
+
+// PDF Part 3 Fix: Flexible time column search
+function findTimeInRow(row) {
+    // Try exact matches first (most common)
+    const timeValue = row['TIME'] || row['Time'] || row['time'] || 
+                     row['TIMESTAMP'] || row['Timestamp'] || row['timestamp'] ||
+                     row['DATE'] || row['Date'] || row['date'] ||
+                     row['DATETIME'] || row['DateTime'] || row['datetime'] ||
+                     row['TRADE TIME'] || row['Trade Time'] || row['trade time'] ||
+                     row['EXECUTION TIME'] || row['Execution Time'] || row['execution time'];
+    
+    if (timeValue && timeValue !== '' && timeValue !== '-') {
+        return timeValue;
+    }
+    
+    // If no exact match, search for any column containing 'time', 'date', or 'stamp'
+    for (const key of Object.keys(row)) {
+        const lowerKey = key.toLowerCase();
+        if ((lowerKey.includes('time') || lowerKey.includes('date') || lowerKey.includes('stamp')) &&
+            row[key] && row[key] !== '' && row[key] !== '-') {
+            console.log(`⏰ Found time in column: "${key}" = "${row[key]}"`);
+            return row[key];
+        }
+    }
+    
+    return '-';
 }
 
 function parseNumber(value) {
