@@ -9,18 +9,18 @@
 <body>
     <div class="container">
         <header>
-            <h1>📊 Stock Flow Tracker - Enhanced v2.6</h1>
+            <h1>📊 Stock Flow Tracker</h1>
             <div class="stats-panel" id="statsPanel">
                 <div class="stat-box">
-                    <span class="stat-label">Total Símbolos:</span>
+                    <span class="stat-label">Total symbols:</span>
                     <span class="stat-value" id="totalSymbols">0</span>
                 </div>
                 <div class="stat-box new">
-                    <span class="stat-label">Nuevos:</span>
+                    <span class="stat-label">News:</span>
                     <span class="stat-value" id="newSymbols">0</span>
                 </div>
                 <div class="stat-box removed">
-                    <span class="stat-label">Eliminados:</span>
+                    <span class="stat-label">Deleted:</span>
                     <span class="stat-value" id="removedSymbols">0</span>
                 </div>
             </div>
@@ -29,7 +29,7 @@
         <!-- Upload Section - NOW COLLAPSIBLE -->
         <section class="upload-section">
             <div class="upload-header" onclick="toggleUploadSection()">
-                <h2>📂 Cargar Archivos CSV Diarios</h2>
+                <h2>📂 Upload Daily CSV Files</h2>
                 <button class="collapse-btn" id="collapseBtn" type="button">
                     <span class="arrow">▼</span>
                 </button>
@@ -38,7 +38,7 @@
             <div class="upload-content" id="uploadContent">
                 <form id="uploadForm">
                     <div class="form-group">
-                        <label>Fecha de Trading:</label>
+                        <label>Full date:</label>
                         <input type="date" id="uploadDate" name="date" required>
                     </div>
                     
@@ -86,14 +86,14 @@
                         </div>
                     </div>
                     
-                    <button type="submit" class="btn-upload">🚀 Procesar Archivos</button>
+                    <button type="submit" class="btn-upload">🚀 Process Files</button>
                 </form>
                 
                 <!-- HISTORY SECTION - NEW -->
                 <div class="history-section" id="historySection">
-                    <h3>📅 Historial de Días Cargados</h3>
+                    <h3>📅 History of Days Loaded</h3>
                     <div class="history-list" id="historyList">
-                        <p class="no-data">No hay días cargados todavía</p>
+                        <p class="no-data">There are no busy days yet.</p>
                     </div>
                 </div>
                 
@@ -111,45 +111,45 @@
 
             <!-- MASTER FLOW TAB -->
             <div class="tab-content active" id="masterFlow">
-                <h2>Master Flow - Vista Completa</h2>
+                <h2>Master Flow - Full view</h2>
                 
                 <div class="controls">
                     <input type="text" id="searchInput" placeholder="🔍 Buscar símbolo...">
                     <div class="filter-buttons">
-                        <button class="filter-btn active" data-filter="all">Todos</button>
-                        <button class="filter-btn" data-filter="new">Nuevos</button>
-                        <button class="filter-btn" data-filter="removed">Eliminados</button>
-                        <button class="filter-btn" data-filter="with_options">Con Opciones</button>
-                        <button class="filter-btn" data-filter="with_darkpool">Con Dark Pool</button>
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="new">News</button>
+                        <button class="filter-btn" data-filter="removed">Deleted</button>
+                        <button class="filter-btn" data-filter="with_options">With Options</button>
+                        <button class="filter-btn" data-filter="with_darkpool">With Dark Pool</button>
                     </div>
                     <select id="sortSelect">
                         <optgroup label="Símbolo">
-                            <option value="symbol_asc">Símbolo (A-Z) ↑</option>
-                            <option value="symbol_desc">Símbolo (Z-A) ↓</option>
+                            <option value="symbol_asc">Symbol (A-Z) ↑</option>
+                            <option value="symbol_desc">Symbol (Z-A) ↓</option>
                         </optgroup>
                         <optgroup label="Dark Pool">
-                            <option value="dp_vol_desc">DP Volumen ↓ (Mayor)</option>
-                            <option value="dp_vol_asc">DP Volumen ↑ (Menor)</option>
-                            <option value="dp_value_desc">DP Valor $M ↓ (Mayor)</option>
-                            <option value="dp_value_asc">DP Valor $M ↑ (Menor)</option>
-                            <option value="dp_prints_desc">DP Prints ↓ (Más)</option>
-                            <option value="dp_prints_asc">DP Prints ↑ (Menos)</option>
+                            <option value="dp_vol_desc">DP Volume ↓ (higher)</option>
+                            <option value="dp_vol_asc">DP Volume ↑ (lower)</option>
+                            <option value="dp_value_desc">DP Value $M ↓ (higher)</option>
+                            <option value="dp_value_asc">DP Value $M ↑ (lower)</option>
+                            <option value="dp_prints_desc">DP Prints ↓ (more)</option>
+                            <option value="dp_prints_asc">DP Prints ↑ (less)</option>
                         </optgroup>
                         <optgroup label="Options">
                             <option value="opt_prints_desc">Opt Prints ↓ (Más)</option>
                             <option value="opt_prints_asc">Opt Prints ↑ (Menos)</option>
-                            <option value="opt_vol_desc">Opt Volumen Total ↓</option>
-                            <option value="opt_vol_asc">Opt Volumen Total ↑</option>
-                            <option value="call_vol_desc">Call Volumen ↓</option>
-                            <option value="call_vol_asc">Call Volumen ↑</option>
-                            <option value="put_vol_desc">Put Volumen ↓</option>
+                            <option value="opt_vol_desc">Opt Total volume ↓</option>
+                            <option value="opt_vol_asc">Opt Total volume ↑</option>
+                            <option value="call_vol_desc">Call Volume ↓</option>
+                            <option value="call_vol_asc">Call Volume ↑</option>
+                            <option value="put_vol_desc">Put Volume ↓</option>
                             <option value="put_vol_asc">Put Volumen ↑</option>
-                            <option value="call_value_desc">Call Valor $M ↓</option>
-                            <option value="call_value_asc">Call Valor $M ↑</option>
-                            <option value="put_value_desc">Put Valor $M ↓</option>
-                            <option value="put_value_asc">Put Valor $M ↑</option>
-                            <option value="cp_ratio_desc">C/P Ratio ↓ (Mayor)</option>
-                            <option value="cp_ratio_asc">C/P Ratio ↑ (Menor)</option>
+                            <option value="call_value_desc">Call value $M ↓</option>
+                            <option value="call_value_asc">Call value $M ↑</option>
+                            <option value="put_value_desc">Put value $M ↓</option>
+                            <option value="put_value_asc">Put value $M ↑</option>
+                            <option value="cp_ratio_desc">C/P Ratio ↓ (higher)</option>
+                            <option value="cp_ratio_asc">C/P Ratio ↑ (lower)</option>
                         </optgroup>
                     </select>
                 </div>
@@ -158,7 +158,7 @@
                     <table class="flow-table" id="flowTable">
                         <thead>
                             <tr>
-                                <th class="col-symbol" colspan="2">SÍMBOLO</th>
+                                <th class="col-symbol" colspan="2">SYMBOL</th>
                                 <th class="col-darkpool">DP VOL</th>
                                 <th class="col-darkpool">DP $M</th>
                                 <th class="col-darkpool">DP PRINTS</th>
@@ -176,7 +176,7 @@
                             </tr>
                         </thead>
                         <tbody id="flowTableBody">
-                            <tr><td colspan="16" class="no-data">Carga archivos CSV para comenzar</td></tr>
+                            <tr><td colspan="16" class="no-data">Upload CSV files to get started</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -184,7 +184,7 @@
 
             <!-- DARK POOL TAB -->
             <div class="tab-content" id="darkPool">
-                <h2>Dark Pool Activity - Solo símbolos con actividad</h2>
+                <h2>Dark Pool Activity - Only symbols with activity</h2>
                 
                 <div class="controls">
                     <input type="text" id="searchInputDP" placeholder="🔍 Buscar símbolo...">
@@ -281,4 +281,5 @@
     <script src="app.js"></script>
 </body>
 </html>
+
 
