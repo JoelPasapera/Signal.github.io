@@ -499,6 +499,56 @@ header h1 {
     border-right: none;
 }
 
+/* ============================================================================
+   SORTABLE HEADERS - NEW FEATURE
+   ============================================================================ */
+
+.flow-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+    position: relative;
+}
+
+.flow-table th.sortable:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.flow-table th.sortable:active {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+.sort-icon {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 0.85em;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.flow-table th.sortable:hover .sort-icon {
+    opacity: 1;
+}
+
+/* Different states for sort icons */
+.sort-icon.neutral {
+    opacity: 0.4;
+}
+
+.sort-icon.asc {
+    opacity: 1;
+    color: #4caf50;
+}
+
+.sort-icon.desc {
+    opacity: 1;
+    color: #2196f3;
+}
+
+/* ============================================================================
+   END SORTABLE HEADERS
+   ============================================================================ */
+
 .flow-table th.col-symbol { background: rgba(0,0,0,0.2); }
 .flow-table th.col-darkpool { background: rgba(118, 75, 162, 0.3); }
 .flow-table th.col-info { background: rgba(0,0,0,0.1); }
@@ -776,8 +826,6 @@ header h1 {
 .matrix-table td {
     padding: 8px;
     text-align: center;
-    color: #000; /* text in black */
-    font-weight: bold; /* bold text */
     border: 1px solid #e0e0e0;
 }
 
