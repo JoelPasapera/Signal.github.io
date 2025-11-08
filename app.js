@@ -1331,61 +1331,82 @@ function copySymbol(symbol) {
 }
 
 function toggleMatrix(symbol) {
-    resetRowColors();
-    closeAllMatrices();
-    
     const matrixRow = document.getElementById(`matrix-${symbol}`);
     const symbolRow = document.querySelector(`#row-${symbol}`);
     
-    if (matrixRow && symbolRow) {
-        matrixRow.classList.add('show');
-        symbolRow.classList.add('row-expanded');
-        currentExpandedRow = symbolRow;
+    // Check if this matrix is already open
+    if (matrixRow && matrixRow.classList.contains('show')) {
+        // If open, close it
+        closeMatrix(symbol);
+    } else {
+        // If closed, close all others first, then open this one
+        resetRowColors();
+        closeAllMatrices();
         
-        const expandBtn = symbolRow.querySelector('.expand-btn');
-        if (expandBtn) {
-            expandBtn.classList.add('expanded');
-            expandBtn.textContent = '➖';
+        if (matrixRow && symbolRow) {
+            matrixRow.classList.add('show');
+            symbolRow.classList.add('row-expanded');
+            currentExpandedRow = symbolRow;
+            
+            const expandBtn = symbolRow.querySelector('.expand-btn');
+            if (expandBtn) {
+                expandBtn.classList.add('expanded');
+                expandBtn.textContent = '➖';
+            }
         }
     }
 }
 
 function toggleMatrixDP(symbol) {
-    resetRowColors();
-    closeAllMatrices();
-    
     const matrixRow = document.getElementById(`matrix-dp-${symbol}`);
     const symbolRow = document.querySelector(`#row-dp-${symbol}`);
     
-    if (matrixRow && symbolRow) {
-        matrixRow.classList.add('show');
-        symbolRow.classList.add('row-expanded');
-        currentExpandedRow = symbolRow;
+    // Check if this matrix is already open
+    if (matrixRow && matrixRow.classList.contains('show')) {
+        // If open, close it
+        closeMatrixDP(symbol);
+    } else {
+        // If closed, close all others first, then open this one
+        resetRowColors();
+        closeAllMatrices();
         
-        const expandBtn = symbolRow.querySelector('.expand-btn');
-        if (expandBtn) {
-            expandBtn.classList.add('expanded');
-            expandBtn.textContent = '➖';
+        if (matrixRow && symbolRow) {
+            matrixRow.classList.add('show');
+            symbolRow.classList.add('row-expanded');
+            currentExpandedRow = symbolRow;
+            
+            const expandBtn = symbolRow.querySelector('.expand-btn');
+            if (expandBtn) {
+                expandBtn.classList.add('expanded');
+                expandBtn.textContent = '➖';
+            }
         }
     }
 }
 
 function toggleMatrixOpt(symbol) {
-    resetRowColors();
-    closeAllMatrices();
-    
     const matrixRow = document.getElementById(`matrix-opt-${symbol}`);
     const symbolRow = document.querySelector(`#row-opt-${symbol}`);
     
-    if (matrixRow && symbolRow) {
-        matrixRow.classList.add('show');
-        symbolRow.classList.add('row-expanded');
-        currentExpandedRow = symbolRow;
+    // Check if this matrix is already open
+    if (matrixRow && matrixRow.classList.contains('show')) {
+        // If open, close it
+        closeMatrixOpt(symbol);
+    } else {
+        // If closed, close all others first, then open this one
+        resetRowColors();
+        closeAllMatrices();
         
-        const expandBtn = symbolRow.querySelector('.expand-btn');
-        if (expandBtn) {
-            expandBtn.classList.add('expanded');
-            expandBtn.textContent = '➖';
+        if (matrixRow && symbolRow) {
+            matrixRow.classList.add('show');
+            symbolRow.classList.add('row-expanded');
+            currentExpandedRow = symbolRow;
+            
+            const expandBtn = symbolRow.querySelector('.expand-btn');
+            if (expandBtn) {
+                expandBtn.classList.add('expanded');
+                expandBtn.textContent = '➖';
+            }
         }
     }
 }
