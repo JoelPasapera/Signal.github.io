@@ -111,10 +111,10 @@
 
             <!-- MASTER FLOW TAB -->
             <div class="tab-content active" id="masterFlow">
-                <h2>Master Flow - Full view</h2>
+                <h2>Master Flow - Full View</h2>
                 
                 <div class="controls">
-                    <input type="text" id="searchInput" placeholder="🔍 Buscar símbolo...">
+                    <input type="text" id="searchInput" placeholder="🔍 Search Symbol...">
                     <div class="filter-buttons">
                         <button class="filter-btn active" data-filter="all">All</button>
                         <button class="filter-btn" data-filter="new">News</button>
@@ -122,56 +122,50 @@
                         <button class="filter-btn" data-filter="with_options">With Options</button>
                         <button class="filter-btn" data-filter="with_darkpool">With Dark Pool</button>
                     </div>
-                    <select id="sortSelect">
-                        <optgroup label="Símbolo">
-                            <option value="symbol_asc">Symbol (A-Z) ↑</option>
-                            <option value="symbol_desc">Symbol (Z-A) ↓</option>
-                        </optgroup>
-                        <optgroup label="Dark Pool">
-                            <option value="dp_vol_desc">DP Volume ↓ (higher)</option>
-                            <option value="dp_vol_asc">DP Volume ↑ (lower)</option>
-                            <option value="dp_value_desc">DP Value $M ↓ (higher)</option>
-                            <option value="dp_value_asc">DP Value $M ↑ (lower)</option>
-                            <option value="dp_prints_desc">DP Prints ↓ (more)</option>
-                            <option value="dp_prints_asc">DP Prints ↑ (less)</option>
-                        </optgroup>
-                        <optgroup label="Options">
-                            <option value="opt_prints_desc">Opt Prints ↓ (Más)</option>
-                            <option value="opt_prints_asc">Opt Prints ↑ (Menos)</option>
-                            <option value="opt_vol_desc">Opt Total volume ↓</option>
-                            <option value="opt_vol_asc">Opt Total volume ↑</option>
-                            <option value="call_vol_desc">Call Volume ↓</option>
-                            <option value="call_vol_asc">Call Volume ↑</option>
-                            <option value="put_vol_desc">Put Volume ↓</option>
-                            <option value="put_vol_asc">Put Volumen ↑</option>
-                            <option value="call_value_desc">Call value $M ↓</option>
-                            <option value="call_value_asc">Call value $M ↑</option>
-                            <option value="put_value_desc">Put value $M ↓</option>
-                            <option value="put_value_asc">Put value $M ↑</option>
-                            <option value="cp_ratio_desc">C/P Ratio ↓ (higher)</option>
-                            <option value="cp_ratio_asc">C/P Ratio ↑ (lower)</option>
-                        </optgroup>
-                    </select>
                 </div>
 
                 <div class="flow-table-container">
                     <table class="flow-table" id="flowTable">
                         <thead>
                             <tr>
-                                <th class="col-symbol" colspan="2">SYMBOL</th>
-                                <th class="col-darkpool">DP VOL</th>
-                                <th class="col-darkpool">DP $M</th>
-                                <th class="col-darkpool">DP PRINTS</th>
+                                <th class="col-symbol sortable" colspan="2" data-sort="symbol">
+                                    SYMBOL <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="col-darkpool sortable" data-sort="dp_vol">
+                                    DP VOL <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="col-darkpool sortable" data-sort="dp_value">
+                                    DP $M <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="col-darkpool sortable" data-sort="dp_prints">
+                                    DP PRINTS <span class="sort-icon">⇅</span>
+                                </th>
                                 <th class="col-info">INDUSTRY</th>
                                 <th class="col-info">SECTOR</th>
-                                <th class="col-options">OPT PRINTS</th>
-                                <th class="col-options">CALL VOL</th>
-                                <th class="col-options">PUT VOL</th>
-                                <th class="col-options">CALL $M</th>
-                                <th class="col-options">PUT $M</th>
-                                <th class="col-options">AVG C STRIKE</th>
-                                <th class="col-options">AVG P STRIKE</th>
-                                <th class="col-options">C/P</th>
+                                <th class="col-options sortable" data-sort="opt_prints">
+                                    OPT PRINTS <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="col-options sortable" data-sort="call_vol">
+                                    CALL VOL <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="col-options sortable" data-sort="put_vol">
+                                    PUT VOL <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="col-options sortable" data-sort="call_value">
+                                    CALL $M <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="col-options sortable" data-sort="put_value">
+                                    PUT $M <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="col-options sortable" data-sort="avg_call_strike">
+                                    AVG C STRIKE <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="col-options sortable" data-sort="avg_put_strike">
+                                    AVG P STRIKE <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="col-options sortable" data-sort="cp_ratio">
+                                    C/P <span class="sort-icon">⇅</span>
+                                </th>
                                 <th class="col-options">BIAS</th>
                             </tr>
                         </thead>
@@ -187,37 +181,31 @@
                 <h2>Dark Pool Activity - Only symbols with activity</h2>
                 
                 <div class="controls">
-                    <input type="text" id="searchInputDP" placeholder="🔍 Buscar símbolo...">
-                    <select id="sortSelectDP">
-                        <optgroup label="Símbolo">
-                            <option value="symbol_asc">Símbolo (A-Z) ↑</option>
-                            <option value="symbol_desc">Símbolo (Z-A) ↓</option>
-                        </optgroup>
-                        <optgroup label="Dark Pool">
-                            <option value="dp_vol_desc">Volumen ↓ (Mayor)</option>
-                            <option value="dp_vol_asc">Volumen ↑ (Menor)</option>
-                            <option value="dp_value_desc">Valor $M ↓ (Mayor)</option>
-                            <option value="dp_value_asc">Valor $M ↑ (Menor)</option>
-                            <option value="dp_prints_desc">Prints ↓ (Más)</option>
-                            <option value="dp_prints_asc">Prints ↑ (Menos)</option>
-                        </optgroup>
-                    </select>
+                    <input type="text" id="searchInputDP" placeholder="🔍 Search Symbol...">
                 </div>
 
                 <div class="flow-table-container">
                     <table class="flow-table" id="darkPoolTable">
                         <thead>
                             <tr>
-                                <th colspan="2">SÍMBOLO</th>
-                                <th>DP VOL</th>
-                                <th>DP $M</th>
-                                <th>DP PRINTS</th>
+                                <th class="sortable" colspan="2" data-sort="symbol">
+                                    SYMBOL <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="sortable" data-sort="dp_vol">
+                                    DP VOL <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="sortable" data-sort="dp_value">
+                                    DP $M <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="sortable" data-sort="dp_prints">
+                                    DP PRINTS <span class="sort-icon">⇅</span>
+                                </th>
                                 <th>INDUSTRY</th>
                                 <th>SECTOR</th>
                             </tr>
                         </thead>
                         <tbody id="darkPoolTableBody">
-                            <tr><td colspan="7" class="no-data">No hay actividad de Dark Pool</td></tr>
+                            <tr><td colspan="7" class="no-data">No Dark Pool activity</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -225,52 +213,48 @@
 
             <!-- UNUSUAL OPTIONS TAB -->
             <div class="tab-content" id="unusualOptions">
-                <h2>Unusual Options Activity - Solo símbolos con actividad</h2>
+                <h2>Unusual Options Activity - Only symbols with activity</h2>
                 
                 <div class="controls">
-                    <input type="text" id="searchInputOpt" placeholder="🔍 Buscar símbolo...">
-                    <select id="sortSelectOpt">
-                        <optgroup label="Símbolo">
-                            <option value="symbol_asc">Símbolo (A-Z) ↑</option>
-                            <option value="symbol_desc">Símbolo (Z-A) ↓</option>
-                        </optgroup>
-                        <optgroup label="Options">
-                            <option value="opt_prints_desc">Prints ↓ (Más)</option>
-                            <option value="opt_prints_asc">Prints ↑ (Menos)</option>
-                            <option value="opt_vol_desc">Volumen Total ↓</option>
-                            <option value="opt_vol_asc">Volumen Total ↑</option>
-                            <option value="call_vol_desc">Call Volumen ↓</option>
-                            <option value="call_vol_asc">Call Volumen ↑</option>
-                            <option value="put_vol_desc">Put Volumen ↓</option>
-                            <option value="put_vol_asc">Put Volumen ↑</option>
-                            <option value="call_value_desc">Call Valor $M ↓</option>
-                            <option value="call_value_asc">Call Valor $M ↑</option>
-                            <option value="put_value_desc">Put Valor $M ↓</option>
-                            <option value="put_value_asc">Put Valor $M ↑</option>
-                            <option value="cp_ratio_desc">C/P Ratio ↓ (Mayor)</option>
-                            <option value="cp_ratio_asc">C/P Ratio ↑ (Menor)</option>
-                        </optgroup>
-                    </select>
+                    <input type="text" id="searchInputOpt" placeholder="🔍 Search Symbol...">
                 </div>
 
                 <div class="flow-table-container">
                     <table class="flow-table" id="optionsTable">
                         <thead>
                             <tr>
-                                <th colspan="2">SÍMBOLO</th>
-                                <th>OPT PRINTS</th>
-                                <th>CALL VOL</th>
-                                <th>PUT VOL</th>
-                                <th>CALL $M</th>
-                                <th>PUT $M</th>
-                                <th>AVG C STRIKE</th>
-                                <th>AVG P STRIKE</th>
-                                <th>C/P RATIO</th>
+                                <th class="sortable" colspan="2" data-sort="symbol">
+                                    SYMBOL <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="sortable" data-sort="opt_prints">
+                                    OPT PRINTS <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="sortable" data-sort="call_vol">
+                                    CALL VOL <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="sortable" data-sort="put_vol">
+                                    PUT VOL <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="sortable" data-sort="call_value">
+                                    CALL $M <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="sortable" data-sort="put_value">
+                                    PUT $M <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="sortable" data-sort="avg_call_strike">
+                                    AVG C STRIKE <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="sortable" data-sort="avg_put_strike">
+                                    AVG P STRIKE <span class="sort-icon">⇅</span>
+                                </th>
+                                <th class="sortable" data-sort="cp_ratio">
+                                    C/P RATIO <span class="sort-icon">⇅</span>
+                                </th>
                                 <th>BIAS</th>
                             </tr>
                         </thead>
                         <tbody id="optionsTableBody">
-                            <tr><td colspan="11" class="no-data">No hay opciones inusuales</td></tr>
+                            <tr><td colspan="11" class="no-data">No unusual options</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -281,5 +265,3 @@
     <script src="app.js"></script>
 </body>
 </html>
-
-
