@@ -67,6 +67,9 @@ function initializeApp() {
     // Initialize sort selects
     setupSortSelects();
     
+    // Initialize sortable headers - NEW
+    setupSortableHeaders();
+    
     // Render initial view
     renderCurrentTab();
     renderHistorySection();
@@ -147,6 +150,87 @@ function setupSortSelects() {
     document.getElementById('sortSelectOpt').addEventListener('change', function() {
         sortOptions.unusualOptions = this.value;
         renderCurrentTab();
+    });
+}
+
+// ============================================================================
+// SORTABLE HEADERS - NEW FEATURE
+// ============================================================================
+
+function setupSortableHeaders() {
+    // Master Flow table
+    setupTableSorting('flowTable', 'masterFlow');
+    
+    // Dark Pool table
+    setupTableSorting('darkPoolTable', 'darkPool');
+    
+    // Unusual Options table
+    setupTableSorting('optionsTable', 'unusualOptions');
+}
+
+function setupTableSorting(tableId, tabName) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const sortableHeaders = table.querySelectorAll('th.sortable');
+    
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            handleHeaderClick(this, tabName);
+        });
+    });
+}
+
+function handleHeaderClick(header, tabName) {
+    const sortKey = header.dataset.sort;
+    if (!sortKey) return;
+    
+    const currentSort = sortOptions[tabName];
+    let newSort;
+    
+    // Determine the next sort state
+    if (currentSort === `${sortKey}_desc`) {
+        // If currently descending, switch to ascending
+        newSort = `${sortKey}_asc`;
+    } else {
+        // If neutral or ascending, switch to descending
+        newSort = `${sortKey}_desc`;
+    }
+    
+    // Update sort option
+    sortOptions[tabName] = newSort;
+    
+    // Update all sort icons in this table
+    updateSortIcons(header.closest('table'), sortKey, newSort);
+    
+    // Re-render the current tab
+    renderCurrentTab();
+}
+
+function updateSortIcons(table, activeSortKey, sortDirection) {
+    // Reset all sort icons in this table
+    const allHeaders = table.querySelectorAll('th.sortable');
+    
+    allHeaders.forEach(header => {
+        const icon = header.querySelector('.sort-icon');
+        if (!icon) return;
+        
+        const headerSortKey = header.dataset.sort;
+        
+        if (headerSortKey === activeSortKey) {
+            // This is the active sort column
+            if (sortDirection.endsWith('_asc')) {
+                icon.textContent = '↑';
+                icon.className = 'sort-icon asc';
+            } else {
+                icon.textContent = '↓';
+                icon.className = 'sort-icon desc';
+            }
+        } else {
+            // Inactive column - show neutral icon
+            icon.textContent = '⇅';
+            icon.className = 'sort-icon neutral';
+        }
     });
 }
 
@@ -823,14 +907,33 @@ function renderCurrentTab() {
     switch (currentTab) {
         case 'masterFlow':
             renderMasterFlow();
+            syncSortIcons('flowTable', 'masterFlow');
             break;
         case 'darkPool':
             renderDarkPoolTab();
+            syncSortIcons('darkPoolTable', 'darkPool');
             break;
         case 'unusualOptions':
             renderUnusualOptionsTab();
+            syncSortIcons('optionsTable', 'unusualOptions');
             break;
     }
+}
+
+// Sync sort icons with current sort state
+function syncSortIcons(tableId, tabName) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const currentSort = sortOptions[tabName];
+    if (!currentSort) return;
+    
+    // Extract sort key and direction from current sort (e.g., "symbol_asc" -> "symbol", "asc")
+    const parts = currentSort.split('_');
+    const direction = parts.pop(); // Get last part (asc or desc)
+    const sortKey = parts.join('_'); // Rejoin remaining parts
+    
+    updateSortIcons(table, sortKey, currentSort);
 }
 
 function updateStats() {
