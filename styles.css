@@ -776,6 +776,8 @@ header h1 {
 .matrix-table td {
     padding: 8px;
     text-align: center;
+    color: #000; /* text in black */
+    font-weight: bold; /* bold text */
     border: 1px solid #e0e0e0;
 }
 
