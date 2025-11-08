@@ -170,12 +170,23 @@ function setupSortableHeaders() {
 
 function setupTableSorting(tableId, tabName) {
     const table = document.getElementById(tableId);
-    if (!table) return;
+    if (!table) {
+        console.warn(`⚠️ Table ${tableId} not found`);
+        return;
+    }
     
     const sortableHeaders = table.querySelectorAll('th.sortable');
+    console.log(`🔧 Setting up ${sortableHeaders.length} sortable headers for ${tableId}`);
     
     sortableHeaders.forEach(header => {
-        header.addEventListener('click', function() {
+        // Remove old event listeners by cloning the element
+        const newHeader = header.cloneNode(true);
+        header.parentNode.replaceChild(newHeader, header);
+        
+        // Add new event listener
+        newHeader.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log(`👆 Clicked on: ${this.dataset.sort}`);
             handleHeaderClick(this, tabName);
         });
     });
@@ -188,14 +199,24 @@ function handleHeaderClick(header, tabName) {
     const currentSort = sortOptions[tabName];
     let newSort;
     
+    console.log(`🔄 Header clicked: ${sortKey}, Current sort: ${currentSort}`);
+    
     // Determine the next sort state
-    if (currentSort === `${sortKey}_desc`) {
+    // First click: descending
+    // Second click: ascending
+    // Third click: descending again
+    if (currentSort === `${sortKey}_asc`) {
+        // If currently ascending, switch to descending
+        newSort = `${sortKey}_desc`;
+    } else if (currentSort === `${sortKey}_desc`) {
         // If currently descending, switch to ascending
         newSort = `${sortKey}_asc`;
     } else {
-        // If neutral or ascending, switch to descending
+        // If neutral or different column, start with descending
         newSort = `${sortKey}_desc`;
     }
+    
+    console.log(`✅ New sort: ${newSort}`);
     
     // Update sort option
     sortOptions[tabName] = newSort;
@@ -907,14 +928,20 @@ function renderCurrentTab() {
     switch (currentTab) {
         case 'masterFlow':
             renderMasterFlow();
+            // Re-initialize sortable headers after render
+            setupTableSorting('flowTable', 'masterFlow');
             syncSortIcons('flowTable', 'masterFlow');
             break;
         case 'darkPool':
             renderDarkPoolTab();
+            // Re-initialize sortable headers after render
+            setupTableSorting('darkPoolTable', 'darkPool');
             syncSortIcons('darkPoolTable', 'darkPool');
             break;
         case 'unusualOptions':
             renderUnusualOptionsTab();
+            // Re-initialize sortable headers after render
+            setupTableSorting('optionsTable', 'unusualOptions');
             syncSortIcons('optionsTable', 'unusualOptions');
             break;
     }
@@ -1056,6 +1083,14 @@ function filterAndSortSymbols(symbols, tabName, excludeETFs = false) {
                 return aMetrics.put_value_millions - bMetrics.put_value_millions;
             case 'put_value_desc':
                 return bMetrics.put_value_millions - aMetrics.put_value_millions;
+            case 'avg_call_strike_asc':
+                return aMetrics.avg_call_strike - bMetrics.avg_call_strike;
+            case 'avg_call_strike_desc':
+                return bMetrics.avg_call_strike - aMetrics.avg_call_strike;
+            case 'avg_put_strike_asc':
+                return aMetrics.avg_put_strike - bMetrics.avg_put_strike;
+            case 'avg_put_strike_desc':
+                return bMetrics.avg_put_strike - aMetrics.avg_put_strike;
             case 'cp_ratio_asc':
                 return aMetrics.cp_ratio - bMetrics.cp_ratio;
             case 'cp_ratio_desc':
