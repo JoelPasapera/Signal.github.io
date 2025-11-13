@@ -35,6 +35,59 @@ const COMMON_ETFS = new Set([
 ]);
 
 // ============================================================================
+// PROCESADOR DE CSV INTELIGENTE - NUEVA FUNCIONALIDAD
+// ============================================================================
+
+/**
+ * Extrae información del campo MESSAGE cuando las columnas principales están vacías
+ * Busca patrones como "DARK BLOCK $85.0M" o volumen/precio en el mensaje
+ */
+function extractFromMessage(message) {
+    const extracted = {
+        volume: null,
+        price: null,
+        notional: null
+    };
+
+    if (!message) return extracted;
+
+    // Extraer valor en millones: $85.0M, $283M, etc.
+    const notionalMatch = message.match(/\$(\d+(?:\.\d+)?)\s*M/i);
+    if (notionalMatch) {
+        extracted.notional = parseFloat(notionalMatch[1]) * 1000000;
+    }
+
+    // Extraer valores en formato $4,999,977
+    const dollarMatch = message.match(/\$([0-9,]+)/);
+    if (dollarMatch && !notionalMatch) {
+        extracted.notional = parseFloat(dollarMatch[1].replace(/,/g, ''));
+    }
+
+    // Extraer volumen si está en el mensaje
+    const volumeMatch = message.match(/Volume[:\s]+([0-9,]+)/i);
+    if (volumeMatch) {
+        extracted.volume = parseFloat(volumeMatch[1].replace(/,/g, ''));
+    }
+
+    // Extraer precio si está en el mensaje
+    const priceMatch = message.match(/Price[:\s]+\$?([0-9.]+)/i);
+    if (priceMatch) {
+        extracted.price = parseFloat(priceMatch[1]);
+    }
+
+    return extracted;
+}
+
+/**
+ * Detecta si un símbolo es ETF/FUND basado en la columna SecurityType
+ */
+function isETFFromType(securityType) {
+    if (!securityType) return false;
+    const type = securityType.toUpperCase();
+    return type.includes('ETF') || type.includes('FUND');
+}
+
+// ============================================================================
 // INITIALIZATION
 // ============================================================================
 
@@ -67,7 +120,7 @@ function initializeApp() {
     // Initialize sort selects
     setupSortSelects();
     
-    // Initialize sortable headers - NEW
+    // Initialize sortable headers
     setupSortableHeaders();
     
     // Render initial view
@@ -137,24 +190,33 @@ function setupSearchInputs() {
 }
 
 function setupSortSelects() {
-    document.getElementById('sortSelect').addEventListener('change', function() {
-        sortOptions.masterFlow = this.value;
-        renderCurrentTab();
-    });
+    const masterFlowSort = document.getElementById('sortSelect');
+    if (masterFlowSort) {
+        masterFlowSort.addEventListener('change', function() {
+            sortOptions.masterFlow = this.value;
+            renderCurrentTab();
+        });
+    }
     
-    document.getElementById('sortSelectDP').addEventListener('change', function() {
-        sortOptions.darkPool = this.value;
-        renderCurrentTab();
-    });
+    const darkPoolSort = document.getElementById('sortSelectDP');
+    if (darkPoolSort) {
+        darkPoolSort.addEventListener('change', function() {
+            sortOptions.darkPool = this.value;
+            renderCurrentTab();
+        });
+    }
     
-    document.getElementById('sortSelectOpt').addEventListener('change', function() {
-        sortOptions.unusualOptions = this.value;
-        renderCurrentTab();
-    });
+    const optionsSort = document.getElementById('sortSelectOpt');
+    if (optionsSort) {
+        optionsSort.addEventListener('change', function() {
+            sortOptions.unusualOptions = this.value;
+            renderCurrentTab();
+        });
+    }
 }
 
 // ============================================================================
-// SORTABLE HEADERS - NEW FEATURE
+// SORTABLE HEADERS
 // ============================================================================
 
 function setupSortableHeaders() {
@@ -201,35 +263,22 @@ function handleHeaderClick(header, tabName) {
     
     console.log(`🔄 Header clicked: ${sortKey}, Current sort: ${currentSort}`);
     
-    // Determine the next sort state
-    // First click: descending
-    // Second click: ascending
-    // Third click: descending again
     if (currentSort === `${sortKey}_asc`) {
-        // If currently ascending, switch to descending
         newSort = `${sortKey}_desc`;
     } else if (currentSort === `${sortKey}_desc`) {
-        // If currently descending, switch to ascending
         newSort = `${sortKey}_asc`;
     } else {
-        // If neutral or different column, start with descending
         newSort = `${sortKey}_desc`;
     }
     
     console.log(`✅ New sort: ${newSort}`);
     
-    // Update sort option
     sortOptions[tabName] = newSort;
-    
-    // Update all sort icons in this table
     updateSortIcons(header.closest('table'), sortKey, newSort);
-    
-    // Re-render the current tab
     renderCurrentTab();
 }
 
 function updateSortIcons(table, activeSortKey, sortDirection) {
-    // Reset all sort icons in this table
     const allHeaders = table.querySelectorAll('th.sortable');
     
     allHeaders.forEach(header => {
@@ -239,7 +288,6 @@ function updateSortIcons(table, activeSortKey, sortDirection) {
         const headerSortKey = header.dataset.sort;
         
         if (headerSortKey === activeSortKey) {
-            // This is the active sort column
             if (sortDirection.endsWith('_asc')) {
                 icon.textContent = '↑';
                 icon.className = 'sort-icon asc';
@@ -248,7 +296,6 @@ function updateSortIcons(table, activeSortKey, sortDirection) {
                 icon.className = 'sort-icon desc';
             }
         } else {
-            // Inactive column - show neutral icon
             icon.textContent = '⇅';
             icon.className = 'sort-icon neutral';
         }
@@ -256,7 +303,7 @@ function updateSortIcons(table, activeSortKey, sortDirection) {
 }
 
 // ============================================================================
-// UPLOAD SECTION COLLAPSE/EXPAND (PDF Part 2 - Requirement 1)
+// UPLOAD SECTION COLLAPSE/EXPAND
 // ============================================================================
 
 function toggleUploadSection() {
@@ -291,7 +338,6 @@ function loadHistoricalData() {
 }
 
 function saveHistoricalData() {
-    // Keep only last 5 days
     if (historicalData.length > 5) {
         historicalData = historicalData.slice(-5);
     }
@@ -300,7 +346,7 @@ function saveHistoricalData() {
 }
 
 // ============================================================================
-// HISTORY SECTION (PDF Part 2 - Requirement 1)
+// HISTORY SECTION
 // ============================================================================
 
 function renderHistorySection() {
@@ -311,7 +357,6 @@ function renderHistorySection() {
         return;
     }
     
-    // Sort by date (most recent first)
     const sortedData = [...historicalData].sort((a, b) => new Date(b.date) - new Date(a.date));
     
     historyList.innerHTML = sortedData.map((day, index) => {
@@ -347,18 +392,12 @@ function deleteMostRecentDay() {
     if (historicalData.length === 0) return;
     
     if (confirm('¿Estás seguro de que quieres borrar el día más reciente? Esta acción no se puede deshacer.')) {
-        // Remove most recent day
         historicalData.pop();
-        
-        // Save to localStorage
         saveHistoricalData();
-        
-        // Update UI
         renderHistorySection();
         updateStats();
         renderCurrentTab();
         
-        // Show success message
         const statusDiv = document.getElementById('uploadStatus');
         statusDiv.textContent = '✅ Día más reciente borrado exitosamente';
         statusDiv.className = 'status-message success';
@@ -389,13 +428,11 @@ async function handleUpload(e) {
     try {
         const date = document.getElementById('uploadDate').value;
         
-        // Check if date already exists
         if (historicalData.some(day => day.date === date)) {
             if (!confirm(`Ya existe data para ${date}. ¿Deseas sobreescribirla?`)) {
                 statusDiv.style.display = 'none';
                 return;
             }
-            // Remove existing data for this date
             historicalData = historicalData.filter(day => day.date !== date);
         }
         
@@ -415,7 +452,7 @@ async function handleUpload(e) {
         if (!optionsFile) throw new Error('Falta archivo de opciones');
         if (!darkpoolFile) throw new Error('Falta archivo de dark pool');
         
-        // Process Trendspider files - extract symbols and prices
+        // Process Trendspider files
         const symbolsData = new Map();
         for (const file of trendspiderFiles) {
             const data = await processTrendspiderFile(file);
@@ -426,28 +463,25 @@ async function handleUpload(e) {
             });
         }
         
-        statusDiv.textContent = '📊 Procesando opciones y dark pool...';
+        statusDiv.textContent = '📊 Procesando opciones y dark pool con EXTRACCIÓN INTELIGENTE...';
         
-        // Process options and darkpool - PDF Part 3 Fix: Better data processing
-        const optionsData = await processOptionsFile(optionsFile);
-        const darkpoolData = await processDarkpoolFile(darkpoolFile);
+        // NUEVA FUNCIONALIDAD: Usar procesador inteligente
+        const optionsData = await processOptionsFileIntelligent(optionsFile);
+        const darkpoolData = await processDarkpoolFileIntelligent(darkpoolFile);
         
         console.log(`📊 Processed Options: ${Object.keys(optionsData).length} symbols`);
         console.log(`🌑 Processed Dark Pool: ${Object.keys(darkpoolData).length} symbols`);
         
         statusDiv.textContent = '🔍 Comparando con días anteriores...';
         
-        // Get previous day symbols
         const previousSymbols = historicalData.length > 0 
             ? new Set(historicalData[historicalData.length - 1].symbols.map(s => s.symbol))
             : new Set();
         
-        // Identify new and removed symbols
         const currentSymbolsSet = new Set(symbolsData.keys());
         const newSymbols = [...currentSymbolsSet].filter(s => !previousSymbols.has(s));
         const removedSymbols = [...previousSymbols].filter(s => !currentSymbolsSet.has(s));
         
-        // Create day data
         const dayData = {
             date: date,
             symbols: []
@@ -467,9 +501,7 @@ async function handleUpload(e) {
                 darkpool_prints: darkpoolData[symbol] || []
             };
             
-            // Calculate aggregated metrics
             symbolData.metrics = calculateSymbolMetrics(symbolData);
-            
             dayData.symbols.push(symbolData);
         }
         
@@ -489,25 +521,20 @@ async function handleUpload(e) {
             });
         }
         
-        // Add to historical data
         historicalData.push(dayData);
         
-        // Keep only last 5 days
         if (historicalData.length > 5) {
             historicalData = historicalData.slice(-5);
         }
         
-        // Save to localStorage
         saveHistoricalData();
         
         statusDiv.textContent = `✅ ¡Éxito! Fecha: ${date} | Total: ${currentSymbolsSet.size} | Nuevos: ${newSymbols.length} | Eliminados: ${removedSymbols.length}`;
         statusDiv.className = 'status-message success';
         
-        // Update views
         renderCurrentTab();
         renderHistorySection();
         
-        // Reset form
         e.target.reset();
         document.getElementById('uploadDate').valueAsDate = new Date();
         document.querySelectorAll('.file-status').forEach(div => {
@@ -515,7 +542,6 @@ async function handleUpload(e) {
             div.classList.remove('loaded');
         });
         
-        // Collapse upload section after successful upload
         if (!uploadSectionCollapsed) {
             toggleUploadSection();
         }
@@ -528,20 +554,18 @@ async function handleUpload(e) {
 }
 
 // ============================================================================
-// ETF DETECTION (PDF Part 2 - Requirement 4.1)
+// ETF DETECTION
 // ============================================================================
 
 function isETF(symbol) {
-    // Check if symbol is in common ETFs list
     if (COMMON_ETFS.has(symbol.toUpperCase())) {
         return true;
     }
-    
-    return false; // Default to not ETF unless in list
+    return false;
 }
 
 // ============================================================================
-// CSV PARSING AND PROCESSING
+// CSV PARSING AND PROCESSING - VERSIONES MEJORADAS
 // ============================================================================
 
 async function readCSVFile(file) {
@@ -570,10 +594,10 @@ function parseCSV(text) {
     
     for (let i = 1; i < lines.length; i++) {
         const values = parseCSVLine(lines[i]);
-        if (values.length === headers.length) {
+        if (values.length === headers.length || values.length === headers.length - 1) {
             const row = {};
             headers.forEach((header, index) => {
-                row[header] = values[index];
+                row[header] = values[index] || '';
             });
             rows.push(row);
         }
@@ -636,14 +660,15 @@ async function processTrendspiderFile(file) {
     return symbolsData;
 }
 
-// PDF Part 3 Fix: Improved options processing to not lose data
-async function processOptionsFile(file) {
+/**
+ * NUEVA FUNCIÓN: Procesamiento inteligente de opciones
+ */
+async function processOptionsFileIntelligent(file) {
     const rows = await readCSVFile(file);
     const optionsData = {};
     
-    console.log(`📊 Processing ${rows.length} rows from options file...`);
+    console.log(`📊 Processing ${rows.length} rows from options file with INTELLIGENT EXTRACTION...`);
     
-    // Debug: Log available columns from first row
     if (rows.length > 0) {
         console.log('📋 Options CSV columns:', Object.keys(rows[0]));
     }
@@ -656,11 +681,10 @@ async function processOptionsFile(file) {
                 optionsData[symbol] = [];
             }
             
-            // PDF Part 3 Fix: Extract time with flexible column name search
             const time = findTimeInRow(row);
             
             const optionPrint = {
-                time: formatTime(time), // Format time for display
+                time: formatTime(time),
                 strike: row['STRIKE'] || row['Strike'] || row['strike'] || '-',
                 exp: row['EXP'] || row['Exp'] || row['Expiration'] || row['expiration'] || '-',
                 dte: row['DTE'] || row['Dte'] || row['dte'] || '-',
@@ -669,15 +693,12 @@ async function processOptionsFile(file) {
                 type: row['TYPE'] || row['Type'] || row['type'] || row['Call/Put'] || row['CALL/PUT'] || '-'
             };
             
-            // PDF Part 3 Fix 2.1: Only add if has meaningful volume (avoid 0 prints)
-            // More strict filter: must have both volume AND premium
             if (optionPrint.vol > 0 && optionPrint.premium > 0) {
                 optionsData[symbol].push(optionPrint);
             }
         }
     }
     
-    // Log statistics
     let totalPrints = 0;
     for (const symbol in optionsData) {
         totalPrints += optionsData[symbol].length;
@@ -687,19 +708,29 @@ async function processOptionsFile(file) {
     return optionsData;
 }
 
-// PDF Part 3 Fix: Improved darkpool processing to not lose data
-async function processDarkpoolFile(file) {
+/**
+ * NUEVA FUNCIÓN: Procesamiento inteligente de Dark Pool con extracción del MESSAGE
+ */
+async function processDarkpoolFileIntelligent(file) {
     const rows = await readCSVFile(file);
     const darkpoolData = {};
+    let etfFilteredCount = 0;
+    let extractedFromMessage = 0;
     
-    console.log(`🌑 Processing ${rows.length} rows from darkpool file...`);
+    console.log(`🌑 Processing ${rows.length} rows from darkpool file with INTELLIGENT EXTRACTION...`);
     
-    // Debug: Log available columns from first row
     if (rows.length > 0) {
         console.log('📋 Dark Pool CSV columns:', Object.keys(rows[0]));
     }
     
     for (const row of rows) {
+        // NUEVA FUNCIONALIDAD: Filtrar ETF/FUND por SecurityType
+        const securityType = row['SecurityType'] || row['Security Type'] || row['TYPE'] || '';
+        if (isETFFromType(securityType)) {
+            etfFilteredCount++;
+            continue; // Saltar este registro
+        }
+        
         let symbol = findSymbolInRow(row);
         
         if (symbol) {
@@ -707,62 +738,73 @@ async function processDarkpoolFile(file) {
                 darkpoolData[symbol] = [];
             }
             
-            // PDF Part 3 Fix: Extract time with flexible column name search
             const time = findTimeInRow(row);
             
+            // Obtener valores de las columnas principales
+            let vol = parseNumber(row['Volume'] || row['VOL'] || row['Vol'] || row['volume'] || '0');
+            let price = parseNumber(row['Price'] || row['PRICE'] || row['price'] || '0');
+            let notional = parseNumber(row['Notional'] || row['NOTIONAL'] || row['notional'] || '0');
+            
+            // NUEVA FUNCIONALIDAD: Si faltan datos, extraer del MESSAGE
+            const message = row['Message'] || row['MESSAGE'] || row['message'] || '';
+            if ((!vol || !price || !notional) && message) {
+                const extracted = extractFromMessage(message);
+                
+                if (extracted.volume || extracted.price || extracted.notional) {
+                    extractedFromMessage++;
+                    console.log(`🔍 Extracted from MESSAGE for ${symbol}:`, extracted);
+                }
+                
+                vol = vol || extracted.volume || 0;
+                price = price || extracted.price || 0;
+                notional = notional || extracted.notional || 0;
+            }
+            
             const dpPrint = {
-                time: formatTime(time), // Format time for display
-                vol: parseNumber(row['VOL'] || row['Vol'] || row['Volume'] || row['volume'] || '0'),
-                price: parseNumber(row['PRICE'] || row['Price'] || row['price'] || '0'),
-                notional: parseNumber(row['NOTIONAL'] || row['Notional'] || row['notional'] || '0'),
-                pct_avg: row['% AVG'] || row['%AVG'] || row['PctAvg'] || row['pct_avg'] || '-'
+                time: formatTime(time),
+                vol: vol,
+                price: price,
+                notional: notional,
+                pct_avg: row['% AVG'] || row['%AVG'] || row['PctAvg'] || row['pct_avg'] || row['Pct_of_Avg30Day'] || '-'
             };
             
-            // PDF Part 3 Fix 2.1: Only add if has meaningful data (avoid 0 prints)
-            // More strict filter: must have volume OR notional > 0
             if (dpPrint.vol > 0 || dpPrint.notional > 0) {
                 darkpoolData[symbol].push(dpPrint);
             }
         }
     }
     
-    // Log statistics
     let totalPrints = 0;
     for (const symbol in darkpoolData) {
         totalPrints += darkpoolData[symbol].length;
     }
+    
     console.log(`✓ Dark Pool data: ${Object.keys(darkpoolData).length} symbols, ${totalPrints} prints`);
+    console.log(`🗑️ ETF/FUND filtered: ${etfFilteredCount} records`);
+    console.log(`🔍 Extracted from MESSAGE: ${extractedFromMessage} records`);
     
     return darkpoolData;
 }
 
-// PDF Part 3 Fix: Format time for display - Enhanced version
 function formatTime(timeStr) {
     if (!timeStr || timeStr === '-' || timeStr === '' || timeStr === 'undefined' || timeStr === 'null') {
         return '-';
     }
     
-    // If already formatted as HH:MM or HH:MM:SS, return as is
     if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(timeStr)) {
         return timeStr;
     }
     
-    // Try to parse as date/timestamp
     try {
-        // Handle various date formats
         let date;
         
-        // Check if it's a Unix timestamp (number)
         if (!isNaN(timeStr) && timeStr.length >= 10) {
             date = new Date(parseInt(timeStr) * (timeStr.length === 10 ? 1000 : 1));
         } else {
-            // Try parsing as date string
             date = new Date(timeStr);
         }
         
-        // Validate the date
         if (!isNaN(date.getTime())) {
-            // Format as HH:MM
             const hours = date.getHours().toString().padStart(2, '0');
             const minutes = date.getMinutes().toString().padStart(2, '0');
             return `${hours}:${minutes}`;
@@ -771,8 +813,6 @@ function formatTime(timeStr) {
         console.warn('⚠️ Could not parse time:', timeStr, e);
     }
     
-    // If all parsing fails, return the original value
-    // This might be a formatted time we don't recognize
     return timeStr;
 }
 
@@ -780,15 +820,14 @@ function findSymbolInRow(row) {
     for (const key of Object.keys(row)) {
         const lowerKey = key.toLowerCase();
         if (lowerKey === 'symbol' || lowerKey === 'ticker' || lowerKey === 'stock' || lowerKey === 'underlying') {
-            return row[key].trim().toUpperCase();
+            const symbol = row[key].trim().toUpperCase();
+            return symbol;
         }
     }
     return null;
 }
 
-// PDF Part 3 Fix: Flexible time column search
 function findTimeInRow(row) {
-    // Try exact matches first (most common)
     const timeValue = row['TIME'] || row['Time'] || row['time'] || 
                      row['TIMESTAMP'] || row['Timestamp'] || row['timestamp'] ||
                      row['DATE'] || row['Date'] || row['date'] ||
@@ -800,12 +839,10 @@ function findTimeInRow(row) {
         return timeValue;
     }
     
-    // If no exact match, search for any column containing 'time', 'date', or 'stamp'
     for (const key of Object.keys(row)) {
         const lowerKey = key.toLowerCase();
         if ((lowerKey.includes('time') || lowerKey.includes('date') || lowerKey.includes('stamp')) &&
             row[key] && row[key] !== '' && row[key] !== '-') {
-            console.log(`⏰ Found time in column: "${key}" = "${row[key]}"`);
             return row[key];
         }
     }
@@ -868,12 +905,10 @@ function calculateSymbolMetrics(symbolData) {
         }
     });
     
-    // Calculate averages and ratio
     metrics.avg_call_strike = callCount > 0 ? callStrikeSum / callCount : 0;
     metrics.avg_put_strike = putCount > 0 ? putStrikeSum / putCount : 0;
     metrics.cp_ratio = metrics.put_vol > 0 ? metrics.call_vol / metrics.put_vol : 0;
     
-    // Determine bias
     if (metrics.cp_ratio > 1.5) {
         metrics.bias = 'bullish';
     } else if (metrics.cp_ratio < 0.67) {
@@ -903,7 +938,7 @@ function getEmptyMetrics() {
 }
 
 // ============================================================================
-// RENDERING AND UI
+// TAB SWITCHING AND RENDERING
 // ============================================================================
 
 function switchTab(tabName) {
@@ -925,42 +960,13 @@ function switchTab(tabName) {
 function renderCurrentTab() {
     updateStats();
     
-    switch (currentTab) {
-        case 'masterFlow':
-            renderMasterFlow();
-            // Re-initialize sortable headers after render
-            setupTableSorting('flowTable', 'masterFlow');
-            syncSortIcons('flowTable', 'masterFlow');
-            break;
-        case 'darkPool':
-            renderDarkPoolTab();
-            // Re-initialize sortable headers after render
-            setupTableSorting('darkPoolTable', 'darkPool');
-            syncSortIcons('darkPoolTable', 'darkPool');
-            break;
-        case 'unusualOptions':
-            renderUnusualOptionsTab();
-            // Re-initialize sortable headers after render
-            setupTableSorting('optionsTable', 'unusualOptions');
-            syncSortIcons('optionsTable', 'unusualOptions');
-            break;
+    if (currentTab === 'masterFlow') {
+        renderMasterFlow();
+    } else if (currentTab === 'darkPool') {
+        renderDarkPool();
+    } else if (currentTab === 'unusualOptions') {
+        renderUnusualOptions();
     }
-}
-
-// Sync sort icons with current sort state
-function syncSortIcons(tableId, tabName) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-    
-    const currentSort = sortOptions[tabName];
-    if (!currentSort) return;
-    
-    // Extract sort key and direction from current sort (e.g., "symbol_asc" -> "symbol", "asc")
-    const parts = currentSort.split('_');
-    const direction = parts.pop(); // Get last part (asc or desc)
-    const sortKey = parts.join('_'); // Rejoin remaining parts
-    
-    updateSortIcons(table, sortKey, currentSort);
 }
 
 function updateStats() {
@@ -971,476 +977,240 @@ function updateStats() {
         return;
     }
     
-    const latestDay = historicalData[historicalData.length - 1];
-    const total = latestDay.symbols.filter(s => !s.is_removed).length;
-    const newCount = latestDay.symbols.filter(s => s.is_new).length;
-    const removedCount = latestDay.symbols.filter(s => s.is_removed).length;
+    const mostRecentDay = historicalData[historicalData.length - 1];
+    const totalSymbols = mostRecentDay.symbols.filter(s => !s.is_removed).length;
+    const newSymbols = mostRecentDay.symbols.filter(s => s.is_new).length;
+    const removedSymbols = mostRecentDay.symbols.filter(s => s.is_removed).length;
     
-    document.getElementById('totalSymbols').textContent = total;
-    document.getElementById('newSymbols').textContent = newCount;
-    document.getElementById('removedSymbols').textContent = removedCount;
+    document.getElementById('totalSymbols').textContent = totalSymbols;
+    document.getElementById('newSymbols').textContent = newSymbols;
+    document.getElementById('removedSymbols').textContent = removedSymbols;
 }
 
-function getCurrentDaySymbols() {
+function getFilteredSymbols() {
     if (historicalData.length === 0) return [];
     
-    const latestDay = historicalData[historicalData.length - 1];
-    return latestDay.symbols.map(s => ({...s}));
+    const mostRecentDay = historicalData[historicalData.length - 1];
+    let symbols = mostRecentDay.symbols;
+    
+    // Apply filter
+    if (currentFilter !== 'all') {
+        if (currentFilter === 'new') {
+            symbols = symbols.filter(s => s.is_new && !s.is_removed);
+        } else if (currentFilter === 'removed') {
+            symbols = symbols.filter(s => s.is_removed);
+        } else if (currentFilter === 'with_options') {
+            symbols = symbols.filter(s => !s.is_removed && s.options_prints.length > 0);
+        } else if (currentFilter === 'with_darkpool') {
+            symbols = symbols.filter(s => !s.is_removed && s.darkpool_prints.length > 0);
+        }
+    }
+    
+    // Apply search
+    const searchTerm = searchTerms[currentTab];
+    if (searchTerm) {
+        symbols = symbols.filter(s => 
+            s.symbol.toLowerCase().includes(searchTerm) ||
+            (s.industry && s.industry.toLowerCase().includes(searchTerm)) ||
+            (s.sector && s.sector.toLowerCase().includes(searchTerm))
+        );
+    }
+    
+    // Apply sort
+    const sortKey = sortOptions[currentTab];
+    symbols = sortSymbols(symbols, sortKey);
+    
+    return symbols;
 }
 
-// PDF Part 3 Fix 1.2: Improved sorting with all ascendente/descendente options
-function filterAndSortSymbols(symbols, tabName, excludeETFs = false) {
-    const searchTerm = searchTerms[tabName] || '';
-    const sortOption = sortOptions[tabName] || 'symbol_asc';
+function sortSymbols(symbols, sortKey) {
+    const [field, direction] = sortKey.split('_');
     
-    // Filter
-    let filtered = symbols.filter(symbol => {
-        // ETF filter (PDF Part 2 - Requirement 4.1)
-        if (excludeETFs && symbol.is_etf) {
-            return false;
-        }
+    return [...symbols].sort((a, b) => {
+        let valA, valB;
         
-        // Search filter
-        if (searchTerm && !symbol.symbol.toLowerCase().includes(searchTerm)) {
-            return false;
-        }
-        
-        // Type filter (only for master flow)
-        if (tabName === 'masterFlow') {
-            switch (currentFilter) {
-                case 'new':
-                    return symbol.is_new;
-                case 'removed':
-                    return symbol.is_removed;
-                case 'with_options':
-                    return symbol.metrics && symbol.metrics.opt_prints > 0;
-                case 'with_darkpool':
-                    return symbol.metrics && symbol.metrics.dp_prints > 0;
-                default:
-                    return true;
-            }
-        }
-        
-        return true;
-    });
-    
-    // Remove duplicates by symbol
-    const uniqueMap = new Map();
-    filtered.forEach(symbol => {
-        if (!uniqueMap.has(symbol.symbol)) {
-            uniqueMap.set(symbol.symbol, symbol);
-        }
-    });
-    filtered = Array.from(uniqueMap.values());
-    
-    // PDF Part 3 Fix 1.2: Enhanced sorting with asc/desc for all columns
-    filtered.sort((a, b) => {
-        const aMetrics = a.metrics || getEmptyMetrics();
-        const bMetrics = b.metrics || getEmptyMetrics();
-        
-        switch (sortOption) {
-            case 'symbol_asc':
-                return a.symbol.localeCompare(b.symbol);
-            case 'symbol_desc':
-                return b.symbol.localeCompare(a.symbol);
-            
-            // Dark Pool sorting
-            case 'dp_vol_asc':
-                return aMetrics.dp_vol - bMetrics.dp_vol;
-            case 'dp_vol_desc':
-                return bMetrics.dp_vol - aMetrics.dp_vol;
-            case 'dp_value_asc':
-                return aMetrics.dp_value_millions - bMetrics.dp_value_millions;
-            case 'dp_value_desc':
-                return bMetrics.dp_value_millions - aMetrics.dp_value_millions;
-            case 'dp_prints_asc':
-                return aMetrics.dp_prints - bMetrics.dp_prints;
-            case 'dp_prints_desc':
-                return bMetrics.dp_prints - aMetrics.dp_prints;
-            
-            // Options sorting
-            case 'opt_prints_asc':
-                return aMetrics.opt_prints - bMetrics.opt_prints;
-            case 'opt_prints_desc':
-                return bMetrics.opt_prints - aMetrics.opt_prints;
-            case 'opt_vol_asc':
-                return (aMetrics.call_vol + aMetrics.put_vol) - (bMetrics.call_vol + bMetrics.put_vol);
-            case 'opt_vol_desc':
-                return (bMetrics.call_vol + bMetrics.put_vol) - (aMetrics.call_vol + aMetrics.put_vol);
-            case 'call_vol_asc':
-                return aMetrics.call_vol - bMetrics.call_vol;
-            case 'call_vol_desc':
-                return bMetrics.call_vol - aMetrics.call_vol;
-            case 'put_vol_asc':
-                return aMetrics.put_vol - bMetrics.put_vol;
-            case 'put_vol_desc':
-                return bMetrics.put_vol - aMetrics.put_vol;
-            case 'call_value_asc':
-                return aMetrics.call_value_millions - bMetrics.call_value_millions;
-            case 'call_value_desc':
-                return bMetrics.call_value_millions - aMetrics.call_value_millions;
-            case 'put_value_asc':
-                return aMetrics.put_value_millions - bMetrics.put_value_millions;
-            case 'put_value_desc':
-                return bMetrics.put_value_millions - aMetrics.put_value_millions;
-            case 'avg_call_strike_asc':
-                return aMetrics.avg_call_strike - bMetrics.avg_call_strike;
-            case 'avg_call_strike_desc':
-                return bMetrics.avg_call_strike - aMetrics.avg_call_strike;
-            case 'avg_put_strike_asc':
-                return aMetrics.avg_put_strike - bMetrics.avg_put_strike;
-            case 'avg_put_strike_desc':
-                return bMetrics.avg_put_strike - aMetrics.avg_put_strike;
-            case 'cp_ratio_asc':
-                return aMetrics.cp_ratio - bMetrics.cp_ratio;
-            case 'cp_ratio_desc':
-                return bMetrics.cp_ratio - aMetrics.cp_ratio;
-            
+        switch(field) {
+            case 'symbol':
+                valA = a.symbol;
+                valB = b.symbol;
+                break;
+            case 'dp':
+                valA = a.metrics?.dp_vol || 0;
+                valB = b.metrics?.dp_vol || 0;
+                break;
+            case 'dpvalue':
+                valA = a.metrics?.dp_value_millions || 0;
+                valB = b.metrics?.dp_value_millions || 0;
+                break;
+            case 'dpprints':
+                valA = a.metrics?.dp_prints || 0;
+                valB = b.metrics?.dp_prints || 0;
+                break;
+            case 'optprints':
+                valA = a.metrics?.opt_prints || 0;
+                valB = b.metrics?.opt_prints || 0;
+                break;
+            case 'callvol':
+                valA = a.metrics?.call_vol || 0;
+                valB = b.metrics?.call_vol || 0;
+                break;
+            case 'putvol':
+                valA = a.metrics?.put_vol || 0;
+                valB = b.metrics?.put_vol || 0;
+                break;
+            case 'callvalue':
+                valA = a.metrics?.call_value_millions || 0;
+                valB = b.metrics?.call_value_millions || 0;
+                break;
+            case 'putvalue':
+                valA = a.metrics?.put_value_millions || 0;
+                valB = b.metrics?.put_value_millions || 0;
+                break;
+            case 'cp':
+                valA = a.metrics?.cp_ratio || 0;
+                valB = b.metrics?.cp_ratio || 0;
+                break;
             default:
-                return 0;
+                valA = a.symbol;
+                valB = b.symbol;
         }
+        
+        if (typeof valA === 'string') {
+            return direction === 'asc' 
+                ? valA.localeCompare(valB)
+                : valB.localeCompare(valA);
+        }
+        
+        return direction === 'asc' ? valA - valB : valB - valA;
     });
-    
-    return filtered;
 }
-
-// ============================================================================
-// MASTER FLOW RENDERING
-// ============================================================================
 
 function renderMasterFlow() {
-    const symbols = getCurrentDaySymbols();
-    const filtered = filterAndSortSymbols(symbols, 'masterFlow', false);
-    
     const tbody = document.getElementById('flowTableBody');
+    const symbols = getFilteredSymbols();
     
-    if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="16" class="no-data">No hay datos disponibles. Carga archivos CSV para comenzar.</td></tr>';
+    if (symbols.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="16" class="no-data">No hay símbolos para mostrar</td></tr>';
         return;
     }
     
-    tbody.innerHTML = filtered.map((symbol) => {
-        const m = symbol.metrics || getEmptyMetrics();
-        
-        // Determine if + button should show (PDF Part 2 - Requirement 3.1)
-        const hasData = (m.opt_prints > 0) || (m.dp_prints > 0);
+    tbody.innerHTML = symbols.map(symbol => {
+        const statusClass = symbol.is_new ? 'new-symbol' : symbol.is_removed ? 'removed-symbol' : '';
         
         return `
-            <tr id="row-${symbol.symbol}" data-symbol="${symbol.symbol}">
-                <td colspan="2">
-                    <div class="symbol-cell">
-                        <div class="symbol-name">${symbol.symbol}${symbol.is_etf ? ' 📊' : ''}</div>
-                        <div class="symbol-price">$${formatNumber(symbol.price)}</div>
-                        <div class="symbol-actions">
-                            <button class="icon-btn copy-btn" onclick="copySymbol('${symbol.symbol}')" title="Copiar símbolo">
-                                📋
-                            </button>
-                            <button class="icon-btn expand-btn ${hasData ? '' : 'no-data'}" onclick="toggleMatrix('${symbol.symbol}')" title="Ver prints matriz">
-                                ➕
-                            </button>
-                        </div>
+            <tr id="row-${symbol.symbol}" class="symbol-row ${statusClass}" data-symbol="${symbol.symbol}">
+                <td class="col-symbol">
+                    <button class="copy-btn" onclick="copySymbol('${symbol.symbol}')" title="Copiar símbolo">
+                        📋
+                    </button>
+                </td>
+                <td class="col-symbol">
+                    <div class="symbol-info">
+                        <span class="symbol-name">${symbol.symbol}</span>
+                        ${symbol.is_new ? '<span class="badge badge-new">NUEVO</span>' : ''}
+                        ${symbol.is_removed ? '<span class="badge badge-removed">ELIMINADO</span>' : ''}
                     </div>
                 </td>
-                <td class="num-value">${formatNumber(m.dp_vol)}</td>
-                <td class="num-value">$${formatNumber(m.dp_value_millions, 2)}M</td>
-                <td class="num-value">${m.dp_prints}</td>
-                <td>${symbol.industry || '-'}</td>
-                <td>${symbol.sector || '-'}</td>
-                <td class="num-value">${m.opt_prints}</td>
-                <td class="num-value">${formatNumber(m.call_vol)}</td>
-                <td class="num-value">${formatNumber(m.put_vol)}</td>
-                <td class="num-value">$${formatNumber(m.call_value_millions, 2)}M</td>
-                <td class="num-value">$${formatNumber(m.put_value_millions, 2)}M</td>
-                <td class="num-value">${formatNumber(m.avg_call_strike, 2)}</td>
-                <td class="num-value">${formatNumber(m.avg_put_strike, 2)}</td>
-                <td class="num-value">${formatNumber(m.cp_ratio, 2)}</td>
-                <td><span class="bias-indicator bias-${m.bias}">${m.bias.toUpperCase()}</span></td>
+                <td class="col-darkpool">${formatNumber(symbol.metrics.dp_vol)}</td>
+                <td class="col-darkpool">$${formatNumber(symbol.metrics.dp_value_millions, 2)}M</td>
+                <td class="col-darkpool">${symbol.metrics.dp_prints || 0}</td>
+                <td class="col-info">${symbol.industry || '-'}</td>
+                <td class="col-info">${symbol.sector || '-'}</td>
+                <td class="col-options">${symbol.metrics.opt_prints || 0}</td>
+                <td class="col-options">${formatNumber(symbol.metrics.call_vol)}</td>
+                <td class="col-options">${formatNumber(symbol.metrics.put_vol)}</td>
+                <td class="col-options">$${formatNumber(symbol.metrics.call_value_millions, 2)}M</td>
+                <td class="col-options">$${formatNumber(symbol.metrics.put_value_millions, 2)}M</td>
+                <td class="col-options">$${formatNumber(symbol.metrics.avg_call_strike, 2)}</td>
+                <td class="col-options">$${formatNumber(symbol.metrics.avg_put_strike, 2)}</td>
+                <td class="col-options">${formatNumber(symbol.metrics.cp_ratio, 2)}</td>
+                <td class="col-options">
+                    <span class="bias-badge bias-${symbol.metrics.bias}">${symbol.metrics.bias.toUpperCase()}</span>
+                </td>
             </tr>
-            ${hasData ? renderMatrixRow(symbol) : ''}
+            ${renderMatrixRow(symbol)}
         `;
     }).join('');
 }
 
-// ============================================================================
-// DARK POOL TAB RENDERING (PDF Part 2 - Requirement 4.1)
-// ============================================================================
-
-function renderDarkPoolTab() {
-    const symbols = getCurrentDaySymbols();
-    const withDarkPool = symbols.filter(s => s.metrics && s.metrics.dp_prints > 0);
-    const filtered = filterAndSortSymbols(withDarkPool, 'darkPool', true); // Exclude ETFs
-    
+function renderDarkPool() {
     const tbody = document.getElementById('darkPoolTableBody');
+    const symbols = getFilteredSymbols().filter(s => !s.is_removed && s.darkpool_prints.length > 0);
     
-    if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="no-data">No hay actividad de Dark Pool para mostrar.</td></tr>';
+    if (symbols.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="no-data">No hay actividad de Dark Pool</td></tr>';
         return;
     }
     
-    tbody.innerHTML = filtered.map((symbol) => {
-        const m = symbol.metrics;
-        
-        return `
-            <tr id="row-dp-${symbol.symbol}" data-symbol="${symbol.symbol}">
-                <td colspan="2">
-                    <div class="symbol-cell">
-                        <div class="symbol-name">${symbol.symbol}</div>
-                        <div class="symbol-price">$${formatNumber(symbol.price)}</div>
-                        <div class="symbol-actions">
-                            <button class="icon-btn copy-btn" onclick="copySymbol('${symbol.symbol}')" title="Copiar símbolo">
-                                📋
-                            </button>
-                            <button class="icon-btn expand-btn" onclick="toggleMatrixDP('${symbol.symbol}')" title="Ver prints matriz">
-                                ➕
-                            </button>
-                        </div>
-                    </div>
-                </td>
-                <td class="num-value">${formatNumber(m.dp_vol)}</td>
-                <td class="num-value">$${formatNumber(m.dp_value_millions, 2)}M</td>
-                <td class="num-value">${m.dp_prints}</td>
-                <td>${symbol.industry || '-'}</td>
-                <td>${symbol.sector || '-'}</td>
-            </tr>
-            ${renderMatrixRowDP(symbol)}
-        `;
-    }).join('');
-}
-
-// ============================================================================
-// OPTIONS TAB RENDERING (PDF Part 2 - Requirement 4.1)
-// ============================================================================
-
-function renderUnusualOptionsTab() {
-    const symbols = getCurrentDaySymbols();
-    const withOptions = symbols.filter(s => s.metrics && s.metrics.opt_prints > 0);
-    const filtered = filterAndSortSymbols(withOptions, 'unusualOptions', true); // Exclude ETFs
-    
-    const tbody = document.getElementById('optionsTableBody');
-    
-    if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" class="no-data">No hay opciones inusuales para mostrar.</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = filtered.map((symbol) => {
-        const m = symbol.metrics;
-        
-        return `
-            <tr id="row-opt-${symbol.symbol}" data-symbol="${symbol.symbol}">
-                <td colspan="2">
-                    <div class="symbol-cell">
-                        <div class="symbol-name">${symbol.symbol}</div>
-                        <div class="symbol-price">$${formatNumber(symbol.price)}</div>
-                        <div class="symbol-actions">
-                            <button class="icon-btn copy-btn" onclick="copySymbol('${symbol.symbol}')" title="Copiar símbolo">
-                                📋
-                            </button>
-                            <button class="icon-btn expand-btn" onclick="toggleMatrixOpt('${symbol.symbol}')" title="Ver prints matriz">
-                                ➕
-                            </button>
-                        </div>
-                    </div>
-                </td>
-                <td class="num-value">${m.opt_prints}</td>
-                <td class="num-value">${formatNumber(m.call_vol)}</td>
-                <td class="num-value">${formatNumber(m.put_vol)}</td>
-                <td class="num-value">$${formatNumber(m.call_value_millions, 2)}M</td>
-                <td class="num-value">$${formatNumber(m.put_value_millions, 2)}M</td>
-                <td class="num-value">${formatNumber(m.avg_call_strike, 2)}</td>
-                <td class="num-value">${formatNumber(m.avg_put_strike, 2)}</td>
-                <td class="num-value">${formatNumber(m.cp_ratio, 2)}</td>
-                <td><span class="bias-indicator bias-${m.bias}">${m.bias.toUpperCase()}</span></td>
-            </tr>
-            ${renderMatrixRowOpt(symbol)}
-        `;
-    }).join('');
-}
-
-// ============================================================================
-// MATRIX VIEW RENDERING (PDF Part 2 - Requirements 2, 3.2, 3.3)
-// ============================================================================
-
-function renderMatrixRow(symbol) {
-    return `
-        <tr class="matrix-view" id="matrix-${symbol.symbol}">
-            <td colspan="16">
-                <div class="matrix-header">
-                    <h4>📊 ${symbol.symbol} - Prints de los últimos 5 días</h4>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        ${symbol.is_new ? '<span class="status-badge new">NUEVO</span>' : ''}
-                        ${symbol.is_removed ? '<span class="status-badge removed">ELIMINADO</span>' : ''}
-                        <div class="matrix-close-buttons">
-                            <button class="matrix-minus-btn" onclick="closeMatrix('${symbol.symbol}')" title="Cerrar (menos)">−</button>
-                            <button class="matrix-close-btn" onclick="closeMatrix('${symbol.symbol}')" title="Cerrar (X)">✕</button>
-                        </div>
-                    </div>
+    tbody.innerHTML = symbols.map(symbol => `
+        <tr id="row-dp-${symbol.symbol}" class="symbol-row" data-symbol="${symbol.symbol}">
+            <td>
+                <button class="copy-btn" onclick="copySymbol('${symbol.symbol}')" title="Copiar símbolo">
+                    📋
+                </button>
+            </td>
+            <td>
+                <div class="symbol-info">
+                    <span class="symbol-name">${symbol.symbol}</span>
                 </div>
-                
-                ${renderOptionsMatrix(symbol)}
-                ${renderDarkPoolMatrix(symbol)}
+            </td>
+            <td>${formatNumber(symbol.metrics.dp_vol)}</td>
+            <td>$${formatNumber(symbol.metrics.dp_value_millions, 2)}M</td>
+            <td>${symbol.metrics.dp_prints}</td>
+            <td>${symbol.industry || '-'}</td>
+            <td>${symbol.sector || '-'}</td>
+        </tr>
+        ${renderMatrixRowDP(symbol)}
+    `).join('');
+}
+
+function renderUnusualOptions() {
+    const tbody = document.getElementById('optionsTableBody');
+    const symbols = getFilteredSymbols().filter(s => !s.is_removed && s.options_prints.length > 0);
+    
+    if (symbols.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" class="no-data">No hay opciones inusuales</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = symbols.map(symbol => `
+        <tr id="row-opt-${symbol.symbol}" class="symbol-row" data-symbol="${symbol.symbol}">
+            <td>
+                <button class="copy-btn" onclick="copySymbol('${symbol.symbol}')" title="Copiar símbolo">
+                    📋
+                </button>
+            </td>
+            <td>
+                <div class="symbol-info">
+                    <span class="symbol-name">${symbol.symbol}</span>
+                </div>
+            </td>
+            <td>${symbol.metrics.opt_prints}</td>
+            <td>${formatNumber(symbol.metrics.call_vol)}</td>
+            <td>${formatNumber(symbol.metrics.put_vol)}</td>
+            <td>$${formatNumber(symbol.metrics.call_value_millions, 2)}M</td>
+            <td>$${formatNumber(symbol.metrics.put_value_millions, 2)}M</td>
+            <td>$${formatNumber(symbol.metrics.avg_call_strike, 2)}</td>
+            <td>$${formatNumber(symbol.metrics.avg_put_strike, 2)}</td>
+            <td>${formatNumber(symbol.metrics.cp_ratio, 2)}</td>
+            <td>
+                <span class="bias-badge bias-${symbol.metrics.bias}">${symbol.metrics.bias.toUpperCase()}</span>
             </td>
         </tr>
-    `;
+        ${renderMatrixRowOpt(symbol)}
+    `).join('');
+}
+
+function renderMatrixRow(symbol) {
+    return `<tr class="matrix-view" id="matrix-${symbol.symbol}"></tr>`;
 }
 
 function renderMatrixRowDP(symbol) {
-    return `
-        <tr class="matrix-view" id="matrix-dp-${symbol.symbol}">
-            <td colspan="7">
-                <div class="matrix-header">
-                    <h4>🌑 ${symbol.symbol} - Dark Pool Prints (5 días)</h4>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        ${symbol.is_new ? '<span class="status-badge new">NUEVO</span>' : ''}
-                        <div class="matrix-close-buttons">
-                            <button class="matrix-minus-btn" onclick="closeMatrixDP('${symbol.symbol}')" title="Cerrar (menos)">−</button>
-                            <button class="matrix-close-btn" onclick="closeMatrixDP('${symbol.symbol}')" title="Cerrar (X)">✕</button>
-                        </div>
-                    </div>
-                </div>
-                
-                ${renderDarkPoolMatrix(symbol)}
-            </td>
-        </tr>
-    `;
+    return `<tr class="matrix-view" id="matrix-dp-${symbol.symbol}"></tr>`;
 }
 
 function renderMatrixRowOpt(symbol) {
-    return `
-        <tr class="matrix-view" id="matrix-opt-${symbol.symbol}">
-            <td colspan="11">
-                <div class="matrix-header">
-                    <h4>📈 ${symbol.symbol} - Options Prints (5 días)</h4>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        ${symbol.is_new ? '<span class="status-badge new">NUEVO</span>' : ''}
-                        <div class="matrix-close-buttons">
-                            <button class="matrix-minus-btn" onclick="closeMatrixOpt('${symbol.symbol}')" title="Cerrar (menos)">−</button>
-                            <button class="matrix-close-btn" onclick="closeMatrixOpt('${symbol.symbol}')" title="Cerrar (X)">✕</button>
-                        </div>
-                    </div>
-                </div>
-                
-                ${renderOptionsMatrix(symbol)}
-            </td>
-        </tr>
-    `;
-}
-
-// PDF Part 2 - Requirement 2: Always 50/50 split for calls/puts
-function renderOptionsMatrix(symbol) {
-    if (!symbol.options_prints || symbol.options_prints.length === 0) {
-        return `
-            <div class="options-matrix-container">
-                <div class="matrix-section calls">
-                    <h5>📞 CALL OPTIONS (0)</h5>
-                    <p class="no-data">No hay calls</p>
-                </div>
-                
-                <div class="matrix-section puts">
-                    <h5>📉 PUT OPTIONS (0)</h5>
-                    <p class="no-data">No hay puts</p>
-                </div>
-            </div>
-        `;
-    }
-    
-    const calls = symbol.options_prints.filter(p => {
-        const type = (p.type || '').toUpperCase();
-        return type.includes('CALL') || type === 'C';
-    });
-    
-    const puts = symbol.options_prints.filter(p => {
-        const type = (p.type || '').toUpperCase();
-        return type.includes('PUT') || type === 'P';
-    });
-    
-    return `
-        <div class="options-matrix-container">
-            <div class="matrix-section calls">
-                <h5>📞 CALL OPTIONS (${calls.length})</h5>
-                ${calls.length > 0 ? renderOptionsTable(calls) : '<p class="no-data">No hay calls</p>'}
-            </div>
-            
-            <div class="matrix-section puts">
-                <h5>📉 PUT OPTIONS (${puts.length})</h5>
-                ${puts.length > 0 ? renderOptionsTable(puts) : '<p class="no-data">No hay puts</p>'}
-            </div>
-        </div>
-    `;
-}
-
-function renderOptionsTable(prints) {
-    return `
-        <table class="matrix-table">
-            <thead>
-                <tr>
-                    <th>TIME</th>
-                    <th>STRIKE</th>
-                    <th>EXP</th>
-                    <th>DTE</th>
-                    <th>VOL</th>
-                    <th>PREMIUM</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${prints.map(p => `
-                    <tr>
-                        <td>${p.time}</td>
-                        <td>${p.strike}</td>
-                        <td>${p.exp}</td>
-                        <td>${p.dte}</td>
-                        <td>${formatNumber(p.vol)}</td>
-                        <td>$${formatNumber(p.premium, 2)}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-}
-
-// PDF Part 2 - Requirement 2: Dark pool same width as calls
-// PDF Part 3 Fix 2: Include TIME column
-function renderDarkPoolMatrix(symbol) {
-    if (!symbol.darkpool_prints || symbol.darkpool_prints.length === 0) {
-        return `
-            <div class="darkpool-matrix-container">
-                <div class="matrix-section">
-                    <h5>🌑 DARK POOL PRINTS (0)</h5>
-                    <p class="no-data">No hay prints de dark pool para este símbolo.</p>
-                </div>
-            </div>
-        `;
-    }
-    
-    return `
-        <div class="darkpool-matrix-container">
-            <div class="matrix-section">
-                <h5>🌑 DARK POOL PRINTS (${symbol.darkpool_prints.length})</h5>
-                <table class="matrix-table">
-                    <thead>
-                        <tr>
-                            <th>TIME</th>
-                            <th>VOL</th>
-                            <th>PRICE</th>
-                            <th>NOTIONAL</th>
-                            <th>% AVG</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${symbol.darkpool_prints.map(p => `
-                            <tr>
-                                <td>${p.time}</td>
-                                <td>${formatNumber(p.vol)}</td>
-                                <td>$${formatNumber(p.price, 2)}</td>
-                                <td>$${formatNumber(p.notional, 0)}</td>
-                                <td>${p.pct_avg}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `;
+    return `<tr class="matrix-view" id="matrix-opt-${symbol.symbol}"></tr>`;
 }
 
 // ============================================================================
@@ -1465,151 +1235,6 @@ function copySymbol(symbol) {
     }).catch(err => {
         console.error('Error copying symbol:', err);
         alert('No se pudo copiar el símbolo');
-    });
-}
-
-function toggleMatrix(symbol) {
-    const matrixRow = document.getElementById(`matrix-${symbol}`);
-    const symbolRow = document.querySelector(`#row-${symbol}`);
-    
-    // Check if this matrix is already open
-    if (matrixRow && matrixRow.classList.contains('show')) {
-        // If open, close it
-        closeMatrix(symbol);
-    } else {
-        // If closed, close all others first, then open this one
-        resetRowColors();
-        closeAllMatrices();
-        
-        if (matrixRow && symbolRow) {
-            matrixRow.classList.add('show');
-            symbolRow.classList.add('row-expanded');
-            currentExpandedRow = symbolRow;
-            
-            const expandBtn = symbolRow.querySelector('.expand-btn');
-            if (expandBtn) {
-                expandBtn.classList.add('expanded');
-                expandBtn.textContent = '➖';
-            }
-        }
-    }
-}
-
-function toggleMatrixDP(symbol) {
-    const matrixRow = document.getElementById(`matrix-dp-${symbol}`);
-    const symbolRow = document.querySelector(`#row-dp-${symbol}`);
-    
-    // Check if this matrix is already open
-    if (matrixRow && matrixRow.classList.contains('show')) {
-        // If open, close it
-        closeMatrixDP(symbol);
-    } else {
-        // If closed, close all others first, then open this one
-        resetRowColors();
-        closeAllMatrices();
-        
-        if (matrixRow && symbolRow) {
-            matrixRow.classList.add('show');
-            symbolRow.classList.add('row-expanded');
-            currentExpandedRow = symbolRow;
-            
-            const expandBtn = symbolRow.querySelector('.expand-btn');
-            if (expandBtn) {
-                expandBtn.classList.add('expanded');
-                expandBtn.textContent = '➖';
-            }
-        }
-    }
-}
-
-function toggleMatrixOpt(symbol) {
-    const matrixRow = document.getElementById(`matrix-opt-${symbol}`);
-    const symbolRow = document.querySelector(`#row-opt-${symbol}`);
-    
-    // Check if this matrix is already open
-    if (matrixRow && matrixRow.classList.contains('show')) {
-        // If open, close it
-        closeMatrixOpt(symbol);
-    } else {
-        // If closed, close all others first, then open this one
-        resetRowColors();
-        closeAllMatrices();
-        
-        if (matrixRow && symbolRow) {
-            matrixRow.classList.add('show');
-            symbolRow.classList.add('row-expanded');
-            currentExpandedRow = symbolRow;
-            
-            const expandBtn = symbolRow.querySelector('.expand-btn');
-            if (expandBtn) {
-                expandBtn.classList.add('expanded');
-                expandBtn.textContent = '➖';
-            }
-        }
-    }
-}
-
-// PDF Part 2 - Requirement 3.2 & 3.3: Both - and X close the matrix
-// PDF Part 3 Fix 1: Both icons are now functional
-function closeMatrix(symbol) {
-    const matrixRow = document.getElementById(`matrix-${symbol}`);
-    const symbolRow = document.querySelector(`#row-${symbol}`);
-    
-    if (matrixRow) matrixRow.classList.remove('show');
-    if (symbolRow) {
-        symbolRow.classList.remove('row-expanded');
-        const expandBtn = symbolRow.querySelector('.expand-btn');
-        if (expandBtn) {
-            expandBtn.classList.remove('expanded');
-            expandBtn.textContent = '➕';
-        }
-    }
-    
-    currentExpandedRow = null;
-}
-
-function closeMatrixDP(symbol) {
-    const matrixRow = document.getElementById(`matrix-dp-${symbol}`);
-    const symbolRow = document.querySelector(`#row-dp-${symbol}`);
-    
-    if (matrixRow) matrixRow.classList.remove('show');
-    if (symbolRow) {
-        symbolRow.classList.remove('row-expanded');
-        const expandBtn = symbolRow.querySelector('.expand-btn');
-        if (expandBtn) {
-            expandBtn.classList.remove('expanded');
-            expandBtn.textContent = '➕';
-        }
-    }
-    
-    currentExpandedRow = null;
-}
-
-function closeMatrixOpt(symbol) {
-    const matrixRow = document.getElementById(`matrix-opt-${symbol}`);
-    const symbolRow = document.querySelector(`#row-opt-${symbol}`);
-    
-    if (matrixRow) matrixRow.classList.remove('show');
-    if (symbolRow) {
-        symbolRow.classList.remove('row-expanded');
-        const expandBtn = symbolRow.querySelector('.expand-btn');
-        if (expandBtn) {
-            expandBtn.classList.remove('expanded');
-            expandBtn.textContent = '➕';
-        }
-    }
-    
-    currentExpandedRow = null;
-}
-
-function closeAllMatrices() {
-    document.querySelectorAll('.matrix-view.show').forEach(matrix => {
-        matrix.classList.remove('show');
-    });
-    
-    document.querySelectorAll('.expand-btn.expanded').forEach(btn => {
-        btn.classList.remove('expanded');
-        btn.textContent = '➕';
     });
 }
 
