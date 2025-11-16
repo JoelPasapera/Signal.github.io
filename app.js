@@ -662,11 +662,13 @@ async function processTrendspiderFile(file) {
     return symbolsData;
 }
 
-// PDF Part 3 Fix: Improved options processing to not lose data
+// ============================================================================
+// CORREGIDO: Función mejorada para procesar archivo de opciones
+// ============================================================================
 async function processOptionsFile(file) {
     const rows = await readCSVFile(file);
     const optionsData = {};
-    const optionsIndustryMap = {}; // NUEVO: Guardar Industry/Sector por símbolo
+    const optionsIndustryMap = {};
     
     console.log(`📊 Processing ${rows.length} rows from options file...`);
     
@@ -683,7 +685,7 @@ async function processOptionsFile(file) {
                 optionsData[symbol] = [];
             }
             
-            // NUEVO: Extraer Industry y Sector del CSV de Options
+            // Extraer Industry y Sector del CSV de Options
             if (!optionsIndustryMap[symbol]) {
                 const industry = row['INDUSTRY'] || row['Industry'] || row['industry'] || '';
                 const sector = row['SECTOR'] || row['Sector'] || row['sector'] || '';
@@ -693,20 +695,48 @@ async function processOptionsFile(file) {
                 }
             }
             
-            // PDF Part 3 Fix: Extract time with flexible column name search
-            const time = findTimeInRow(row);
+            // Extraer tiempo (columna Time)
+            const time = row['Time'] || row['TIME'] || row['time'] || findTimeInRow(row);
+            
+            // Extraer fecha de expiración (columna "Exp Date")
+            const expDate = row['Exp Date'] || row['ExpDate'] || row['EXP'] || row['Exp'] || row['Expiration'] || row['expiration'] || '-';
+            
+            // Extraer DTE
+            const dte = row['DTE'] || row['Dte'] || row['dte'] || '-';
+            
+            // Extraer Strike
+            const strike = row['Strike'] || row['STRIKE'] || row['strike'] || '-';
+            
+            // Extraer Volume
+            const volume = parseNumber(row['Volume'] || row['VOL'] || row['Vol'] || row['volume'] || '0');
+            
+            // IMPORTANTE: Calcular premium desde "Last" o promedio de Bid/Ask
+            let premium = 0;
+            if (row['Last'] || row['LAST'] || row['last']) {
+                premium = parseNumber(row['Last'] || row['LAST'] || row['last']);
+            } else if (row['Bid'] && row['Ask']) {
+                // Si no hay Last, calcular promedio de Bid y Ask
+                const bid = parseNumber(row['Bid'] || row['BID'] || '0');
+                const ask = parseNumber(row['Ask'] || row['ASK'] || '0');
+                premium = (bid + ask) / 2;
+            } else if (row['PREMIUM'] || row['Premium'] || row['premium']) {
+                premium = parseNumber(row['PREMIUM'] || row['Premium'] || row['premium']);
+            }
+            
+            // Extraer tipo (Call/Put)
+            let type = row['Type'] || row['TYPE'] || row['type'] || row['Call/Put'] || row['CALL/PUT'] || '-';
             
             const optionPrint = {
                 time: formatTime(time),
-                strike: row['STRIKE'] || row['Strike'] || row['strike'] || '-',
-                exp: row['EXP'] || row['Exp'] || row['Expiration'] || row['expiration'] || '-',
-                dte: row['DTE'] || row['Dte'] || row['dte'] || '-',
-                vol: parseNumber(row['VOL'] || row['Vol'] || row['Volume'] || row['volume'] || '0'),
-                premium: parseNumber(row['PREMIUM'] || row['Premium'] || row['premium'] || '0'),
-                type: row['TYPE'] || row['Type'] || row['type'] || row['Call/Put'] || row['CALL/PUT'] || '-'
+                strike: strike,
+                exp: expDate,
+                dte: dte,
+                vol: volume,
+                premium: premium,
+                type: type
             };
             
-            // PDF Part 3 Fix 2.1: Only add if has meaningful volume (avoid 0 prints)
+            // Solo agregar si tiene volumen y premium significativos
             if (optionPrint.vol > 0 && optionPrint.premium > 0) {
                 optionsData[symbol].push(optionPrint);
             }
@@ -721,7 +751,6 @@ async function processOptionsFile(file) {
     console.log(`✓ Options data: ${Object.keys(optionsData).length} symbols, ${totalPrints} prints`);
     console.log(`✓ Options industry/sector data: ${Object.keys(optionsIndustryMap).length} symbols`);
     
-    // NUEVO: Retornar tanto los prints como el mapa de industry/sector
     return { prints: optionsData, industryMap: optionsIndustryMap };
 }
 
